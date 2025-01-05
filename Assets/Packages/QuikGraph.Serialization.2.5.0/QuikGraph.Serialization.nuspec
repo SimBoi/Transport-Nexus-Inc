@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>QuikGraph.Serialization</id>
+    <version>2.5.0</version>
+    <title>QuikGraph.Serialization</title>
+    <authors>Alexandre Rabérin</authors>
+    <license type="expression">MS-PL</license>
+    <licenseUrl>https://licenses.nuget.org/MS-PL</licenseUrl>
+    <icon>quikgraph_logo.png</icon>
+    <projectUrl>https://github.com/KeRNeLith/QuikGraph</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/KeRNeLith/QuikGraph/master/docs/images/quikgraph_logo.png</iconUrl>
+    <description>.NET library that provides serialization features related to QuikGraph data structures.
+
+This package is the serialization subset of the original QuickGraph renamed QuikGraph and ported to .NET Core.
+
+Supported platforms:
+- .NET Standard 1.3+
+- .NET Core 1.0+
+- .NET Framework 3.5+
+
+Supports Source Link</description>
+    <releaseNotes>➟ Release 2.5.0
+Fixes:
+- Fix fields being written several times during GraphML serialization for types with multiple inheritance layers.
+- Fix user data that may be skipped during GraphML deserialization.
+- Better handle null strings being serialized through GraphML serialization.
+
+Updates:
+- Deprecate binary serialization for targets lower than .NET Framework 4.6.1.
+- Update package dependencies.
+
+Optims:
+- Optimize generated method calls for GraphML serialization.
+
+Misc:
+- Add target .NET Framework 4.6.1.
+- Assembly is CLS compliant (Common Language Specification).</releaseNotes>
+    <copyright>Copyright © 2020</copyright>
+    <tags>QuickGraph QuikGraph Graph Structure Algorithm C# .NET Serialization</tags>
+    <repository type="GitHub" url="https://github.com/KeRNeLith/QuikGraph" commit="9cd6b49292e09041258708a37bed99c56177b0ef" />
+    <dependencies>
+      <group targetFramework=".NETFramework3.5">
+        <dependency id="QuikGraph" version="2.5.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETFramework4.0">
+        <dependency id="QuikGraph" version="2.5.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETFramework4.6.1">
+        <dependency id="QuikGraph" version="2.5.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard1.3">
+        <dependency id="QuikGraph" version="2.5.0" exclude="Build,Analyzers" />
+        <dependency id="NETStandard.Library" version="1.6.1" exclude="Build,Analyzers" />
+        <dependency id="System.ComponentModel.Primitives" version="4.3.0" exclude="Build,Analyzers" />
+        <dependency id="System.Diagnostics.Process" version="4.3.0" exclude="Build,Analyzers" />
+        <dependency id="System.Reflection.Emit.Lightweight" version="4.7.0" exclude="Build,Analyzers" />
+        <dependency id="System.Xml.XmlSerializer" version="4.3.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="QuikGraph" version="2.5.0" exclude="Build,Analyzers" />
+        <dependency id="System.Reflection.Emit.Lightweight" version="4.7.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.1">
+        <dependency id="QuikGraph" version="2.5.0" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>
