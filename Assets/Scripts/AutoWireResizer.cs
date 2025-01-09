@@ -8,7 +8,7 @@ public class AutoWireResizer : MonoBehaviour
 
     public void SetStart(Vector3 start)
     {
-        rope.StartPoint.position = start;
+        transform.position = start;
     }
 
     public void SetEnd(Vector3 end)

@@ -136,7 +136,6 @@ namespace Components
         public SignalNetworkGraph network;
         public Port outputPort;
 
-        // the initializer should be called in the derived class's Start() method
         public void Initialize(SignalNetworkGraph signalNetworkGraph)
         {
             network = signalNetworkGraph;
@@ -161,7 +160,6 @@ namespace Components
         private Processor _chainedInputProcessor;
         private Processor _chainedOutputProcessor;
 
-        // the initializer should be called in the derived class's Start() method
         public void Initialize(SignalNetworkGraph signalNetworkGraph, int inputChannelCount = 1, int delayTicks = 1)
         {
             network = signalNetworkGraph;
@@ -182,6 +180,7 @@ namespace Components
             {
                 // create input channels array
                 inputPorts = new Port[inputPortsCount];
+                for (int i = 0; i < inputPortsCount; i++) inputPorts[i] = new Port(network);
             }
             else
             {
@@ -204,7 +203,6 @@ namespace Components
             for (int i = 0; i < delayTicks; i++) _outputQueue.Enqueue(0);
         }
 
-        // chains the input of the current processor to the output of the inputProcessor and the output of the current processor to the input of the outputProcessor
         public void Chain(Processor inputProcessor)
         {
             if (IsInputChained()) throw new System.Exception("Input already chained.");
