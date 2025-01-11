@@ -441,4 +441,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rope: {fileID: 6251774129952247887}
-  slack: 0.5
+  slack: 0.125

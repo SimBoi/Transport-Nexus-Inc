@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using QuikGraph;
+using System.Linq;
 
 namespace Components
 {
@@ -13,22 +14,30 @@ namespace Components
         public void AddPort(Port port)
         {
             if (!_graph.AddVertex(port)) return;
-            port.signalChannel = new SignalChannel();
-            _signalChannels.Add(port.signalChannel);
+            port.signalChannel = null;
         }
 
         public void RemovePort(Port port)
         {
             foreach (TaggedUndirectedEdge<Port, GameObject> edge in _graph.AdjacentEdges(port)) DisconnectWire(edge.Tag);
-            _signalChannels.Remove(port.signalChannel);
+            if (port.isConnected) _signalChannels.Remove(port.signalChannel);
             _graph.RemoveVertex(port);
         }
 
         public void ConnectWire(GameObject wire, Port port1, Port port2)
         {
-            TaggedUndirectedEdge<Port, GameObject> edge = new(port1, port2, wire);
+            if (port1.isConnected) AssignSignalChannelBFS(port2, port1.signalChannel);
+            else if (port2.isConnected) AssignSignalChannelBFS(port1, port2.signalChannel);
+            else
+            {
+                AssignSignalChannelBFS(port1, new SignalChannel());
+                AssignSignalChannelBFS(port2, port1.signalChannel);
+            }
 
-            AssignSinalChannelBFS(port2, port1.signalChannel);
+            TaggedUndirectedEdge<Port, GameObject> edge;
+            if (port1.CompareTo(port2) > 0) edge = new(port2, port1, wire);
+            else edge = new(port1, port2, wire);
+
             if (!_graph.AddEdge(edge)) throw new System.Exception("Failed to add edge.");
             _wires.Add(wire, edge);
         }
@@ -37,16 +46,44 @@ namespace Components
         {
             if (!_wires.ContainsKey(wire)) return;
             TaggedUndirectedEdge<Port, GameObject> edge = _wires[wire];
+            Port port1 = edge.Source;
+            Port port2 = edge.Target;
 
             _wires.Remove(wire);
             _graph.RemoveEdge(edge);
-            AssignSinalChannelBFS(edge.Target, new SignalChannel(), false);
+
+            bool port1Connected = _graph.AdjacentEdges(port1).Any();
+            bool port2Connected = _graph.AdjacentEdges(port2).Any();
+            if (port1Connected && port2Connected)
+            {
+                AssignSignalChannelBFS(port1, new SignalChannel(), false);
+            }
+            else if (port1Connected)
+            {
+                AssignSignalChannelBFS(port2, null, false);
+            }
+            else if (port2Connected)
+            {
+                AssignSignalChannelBFS(port1, null, false);
+            }
+            else
+            {
+                AssignSignalChannelBFS(port1, null, true);
+                AssignSignalChannelBFS(port2, null, false);
+            }
         }
 
-        public void AssignSinalChannelBFS(Port startPort, SignalChannel signalChannel, bool removeOldChannel = true)
+        public void AssignSignalChannelBFS(Port startPort, SignalChannel signalChannel, bool removeOldChannel = true)
         {
             if (removeOldChannel) _signalChannels.Remove(startPort.signalChannel); // remove the old signal channel
-            _signalChannels.Add(signalChannel); // add the new signal channel
+            if (signalChannel != null) _signalChannels.Add(signalChannel); // add the new signal channel
+
+            // leaf node
+            if (!_graph.AdjacentEdges(startPort).Any())
+            {
+                startPort.signalChannel = signalChannel;
+                return;
+            }
 
             Queue<Port> queue = new();
             HashSet<Port> visited = new();
@@ -93,53 +130,15 @@ namespace Components
         }
     }
 
-    public class Port
-    {
-        public SignalNetworkGraph network;
-        public SignalChannel signalChannel;
-
-        // the Port is enabled by default
-        public Port(SignalNetworkGraph signalNetworkGraph)
-        {
-            network = signalNetworkGraph;
-            Connect();
-        }
-
-        public void Connect()
-        {
-            network.AddPort(this);
-        }
-
-        public void Disconnect()
-        {
-            network.RemovePort(this);
-        }
-
-        public void Write(float signal)
-        {
-            signalChannel.Write(signal);
-        }
-
-        public float Read()
-        {
-            return signalChannel.Read();
-        }
-
-        public void Reset()
-        {
-            signalChannel.Reset();
-        }
-    }
-
     public class Sensor : MonoBehaviour
     {
-        public SignalNetworkGraph network;
-        public Port outputPort;
+        public SignalNetworkGraph network { get; private set; }
+        [SerializeField] public Port outputPort;
 
         public void Initialize(SignalNetworkGraph signalNetworkGraph)
         {
             network = signalNetworkGraph;
-            outputPort = new Port(network);
+            outputPort.AddToNetwork(network);
         }
 
         public void Read()
@@ -152,43 +151,20 @@ namespace Components
 
     public class Processor : MonoBehaviour
     {
-        public SignalNetworkGraph network;
-        public Port[] inputPorts;
-        public Port outputPort;
-        private Queue<float> _outputQueue;
-        private float _processedSignal;
-        private Processor _chainedInputProcessor;
-        private Processor _chainedOutputProcessor;
+        public SignalNetworkGraph network { get; private set; }
+        [SerializeField] public Port[] inputPorts;
+        [SerializeField] public Port outputPort;
+        public Queue<float> _outputQueue { get; private set; }
+        public float _processedSignal { get; private set; }
+        public Processor _chainedInputProcessor { get; private set; }
+        public Processor _chainedOutputProcessor { get; private set; }
 
-        public void Initialize(SignalNetworkGraph signalNetworkGraph, int inputChannelCount = 1, int delayTicks = 1)
+        public void Initialize(SignalNetworkGraph signalNetworkGraph, int delayTicks = 1)
         {
             network = signalNetworkGraph;
-            SetInputChannelCount(inputChannelCount);
-            outputPort = new Port(network);
+            foreach (Port inputPort in inputPorts) inputPort.AddToNetwork(network);
+            outputPort.AddToNetwork(network);
             SetOutputDelay(delayTicks);
-        }
-
-        public void SetInputChannelCount(int inputPortsCount)
-        {
-            if (inputPortsCount < 1)
-            {
-                Debug.LogError("Invalid input channel count: " + inputPortsCount);
-                return;
-            }
-
-            if (inputPorts == null)
-            {
-                // create input channels array
-                inputPorts = new Port[inputPortsCount];
-                for (int i = 0; i < inputPortsCount; i++) inputPorts[i] = new Port(network);
-            }
-            else
-            {
-                // resize input channels array, keeping existing channels up to the new size
-                Port[] newInputChannels = new Port[inputPortsCount];
-                for (int i = 0; i < inputPortsCount; i++) newInputChannels[i] = i < inputPorts.Length ? inputPorts[i] : new Port(network);
-                inputPorts = newInputChannels;
-            }
         }
 
         public void SetOutputDelay(int delayTicks)
@@ -210,8 +186,8 @@ namespace Components
             _chainedInputProcessor = inputProcessor;
             inputProcessor._chainedOutputProcessor = this;
 
-            inputPorts[0].Disconnect();
-            inputProcessor.outputPort.Disconnect();
+            inputPorts[0].RemoveFromNetwork();
+            inputProcessor.outputPort.RemoveFromNetwork();
             SignalChannel signalChannel = new();
             inputPorts[0].signalChannel = signalChannel;
             inputProcessor.outputPort.signalChannel = signalChannel;
@@ -221,8 +197,8 @@ namespace Components
         {
             if (!IsInputChained()) throw new System.Exception("Input not chained.");
 
-            _chainedInputProcessor.outputPort.Connect();
-            inputPorts[0].Connect();
+            _chainedInputProcessor.outputPort.AddToNetwork(network);
+            inputPorts[0].AddToNetwork(network);
 
             _chainedInputProcessor._chainedOutputProcessor = null;
             _chainedInputProcessor = null;
@@ -259,7 +235,7 @@ namespace Components
             }
         }
 
-        protected virtual float ProcessSignal(float[] signals) { Debug.LogError("Signal processor not implemented."); return 0; }
+        protected virtual float ProcessSignal(float[] inputSignals) { Debug.LogError("Signal processor not implemented."); return 0; }
 
         public void AdvanceOutputQueue()
         {
@@ -272,21 +248,23 @@ namespace Components
 
     public class Actuator : MonoBehaviour
     {
-        public SignalNetworkGraph network;
-        public Port inputPort;
+        public SignalNetworkGraph network { get; private set; }
+        [SerializeField] public Port[] inputPorts;
 
         // the initializer should be called in the derived class's Start() method
         public void Initialize(SignalNetworkGraph signalNetworkGraph)
         {
             network = signalNetworkGraph;
-            inputPort = new Port(network);
+            foreach (Port inputPort in inputPorts) inputPort.AddToNetwork(network);
         }
 
         public void Write()
         {
-            WriteActuator(inputPort.Read());
+            float[] signals = new float[inputPorts.Length];
+            for (int i = 0; i < inputPorts.Length; i++) signals[i] = inputPorts[i].Read();
+            WriteActuator(signals);
         }
 
-        protected virtual void WriteActuator(float signal) { }
+        protected virtual void WriteActuator(float[] inputSignals) { }
     }
 }

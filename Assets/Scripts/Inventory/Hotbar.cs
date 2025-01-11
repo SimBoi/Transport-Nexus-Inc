@@ -112,9 +112,7 @@ public class Hotbar : MonoBehaviour
             if (!draggedItem.activeSelf) draggedItem.SetActive(true);
 
             // move the dragged item with the pointer
-            PointerEventData pointerData = (PointerEventData)data;
-            Ray ray = Camera.main.ScreenPointToRay(pointerData.position);
-            // ignore the dragged item layer
+            Ray ray = Camera.main.ScreenPointToRay(((PointerEventData)data).position);
             if (Physics.Raycast(ray, out RaycastHit result))
             {
                 draggedItem.transform.position = result.point;

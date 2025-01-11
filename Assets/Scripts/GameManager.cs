@@ -12,6 +12,10 @@ public class GameManager : MonoBehaviour
     private Dictionary<Vector2Int, Components.Processor> _processors = new();
     private Dictionary<Vector2Int, Components.Actuator> _actuators = new();
 
+    private GameObject _focusedStructure;
+    [SerializeField] private GameObject portUIPrefab;
+    private List<GameObject> _highlightedPorts = new();
+
     private void Awake()
     {
         if (Instance == null) Instance = this;
@@ -41,7 +45,10 @@ public class GameManager : MonoBehaviour
         foreach (Components.Actuator actuator in _actuators.Values) actuator.Write();
     }
 
-    // Components should be disabled by default, this method will enable them
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////// Tile Management ///////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
     public void AddStructure(Vector2Int tile, Vector2Int orientation, GameObject structurePrefab)
     {
         Vector3 position = new Vector3(tile.x, 0, tile.y);
@@ -94,11 +101,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void AddWire(Vector2Int start, Vector2Int end)
-    {
-        return;
-    }
-
     public void RemoveStructure(Vector2Int tile)
     {
         if (_sensors.ContainsKey(tile))
@@ -128,11 +130,6 @@ public class GameManager : MonoBehaviour
         RemoveTile(tile);
     }
 
-    public void RemoveWire(Vector2Int start, Vector2Int end)
-    {
-        return;
-    }
-
     private void AddTile(Vector2Int tile, Vector2Int orientation, object structure)
     {
         if (_tiles.ContainsKey(tile)) throw new System.Exception("Tile already exists at position: " + tile);
@@ -143,5 +140,97 @@ public class GameManager : MonoBehaviour
     {
         if (!_tiles.ContainsKey(tile)) throw new System.Exception("Tile does not exist at position: " + tile);
         _tiles.Remove(tile);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////// UI /////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public void FocusStructure(GameObject structure)
+    {
+        if (_focusedStructure != null) UnfocusStructure();
+        _focusedStructure = structure;
+        _focusedStructure.GetComponent<StructureUI>().Focus();
+        HighlightDisconnectedPorts(structure.transform.position);
+    }
+
+    public void UnfocusStructure()
+    {
+        if (_focusedStructure == null) return;
+        _focusedStructure.GetComponent<StructureUI>().Unfocus();
+        _focusedStructure = null;
+        UnhighlightDisconnectedPorts();
+    }
+
+    public void HighlightDisconnectedPorts(Vector3 center, float radius = 0, List<Components.Port> excludePorts = null)
+    {
+        // go through all the tiles in a 2*radius square around the center and highlight the ports
+        for (int x = -Mathf.FloorToInt(radius); x <= Mathf.FloorToInt(radius); x++)
+        {
+            for (int y = -Mathf.FloorToInt(radius); y <= Mathf.FloorToInt(radius); y++)
+            {
+                Vector2Int tile = new Vector2Int(x, y) + new Vector2Int(Mathf.FloorToInt(center.x), Mathf.FloorToInt(center.z));
+                if (!_tiles.ContainsKey(tile)) continue;
+
+                (Vector2Int _, object structure) = _tiles[tile];
+                if (structure is Components.Sensor sensor)
+                {
+                    if (excludePorts != null && excludePorts.Contains(sensor.outputPort)) continue;
+                    HighlightDisconnectedPort(sensor.outputPort);
+                }
+                else if (structure is Components.Processor processor)
+                {
+                    foreach (Components.Port port in processor.inputPorts)
+                    {
+                        if (excludePorts != null && excludePorts.Contains(port)) continue;
+                        HighlightDisconnectedPort(port);
+                    }
+                    if (excludePorts != null && excludePorts.Contains(processor.outputPort)) continue;
+                    HighlightDisconnectedPort(processor.outputPort);
+                }
+                else if (structure is Components.Actuator actuator)
+                {
+                    foreach (Components.Port port in actuator.inputPorts)
+                    {
+                        if (excludePorts != null && excludePorts.Contains(port)) continue;
+                        HighlightDisconnectedPort(port);
+                    }
+                }
+            }
+        }
+    }
+
+    public void HighlightDisconnectedPort(Components.Port port)
+    {
+        if (port.isConnected) return;
+
+        Vector3 cameraDirection = Camera.main.transform.forward;
+        Vector3 position = port.transform.position - cameraDirection * 0.5f;
+        Quaternion rotation = Quaternion.LookRotation(-cameraDirection, Vector3.up);
+        GameObject portUI = Instantiate(portUIPrefab, position, rotation);
+        portUI.GetComponent<PortUI>().port = port;
+        _highlightedPorts.Add(portUI);
+    }
+
+    public void UnhighlightDisconnectedPorts(List<Components.Port> excludePorts = null)
+    {
+        List<GameObject> portsToKeep = new();
+        foreach (GameObject portUI in _highlightedPorts)
+        {
+            if (excludePorts != null && excludePorts.Contains(portUI.GetComponent<PortUI>().port)) portsToKeep.Add(portUI);
+            else Destroy(portUI);
+        }
+        _highlightedPorts = portsToKeep;
+    }
+
+    public void ConnectWire(Components.Port port1, Components.Port port2, GameObject wire)
+    {
+        signalNetworkGraph.ConnectWire(wire, port1, port2);
+    }
+
+    public void DisconnectWire(GameObject wire)
+    {
+        signalNetworkGraph.DisconnectWire(wire);
+        Destroy(wire);
     }
 }
