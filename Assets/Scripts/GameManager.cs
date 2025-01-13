@@ -12,6 +12,7 @@ public class GameManager : MonoBehaviour
     private Dictionary<Vector2Int, Components.Processor> _processors = new();
     private Dictionary<Vector2Int, Components.Actuator> _actuators = new();
 
+    private bool _isFocused = false;
     private GameObject _focusedStructure;
     [SerializeField] private GameObject portUIPrefab;
     private List<GameObject> _highlightedPorts = new();
@@ -146,20 +147,40 @@ public class GameManager : MonoBehaviour
     /////////////////////////////////////////// UI /////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public void FocusStructure(GameObject structure)
+    public void FocusStructure(GameObject structure, bool structureUI = true, bool portUI = true, List<Components.Port> excludePorts = null)
     {
-        if (_focusedStructure != null) UnfocusStructure();
+        if (_isFocused) UnfocusStructure();
+        _isFocused = true;
         _focusedStructure = structure;
-        _focusedStructure.GetComponent<StructureUI>().Focus();
-        HighlightDisconnectedPorts(structure.transform.position);
+
+        if (structureUI) _focusedStructure.GetComponent<StructureUI>().Focus();
+        if (portUI) HighlightDisconnectedPorts(structure.transform.position, excludePorts: excludePorts);
     }
 
-    public void UnfocusStructure()
+    public void UnfocusStructure(bool structureUI = true, bool portUI = true, List<Components.Port> excludePorts = null)
     {
-        if (_focusedStructure == null) return;
-        _focusedStructure.GetComponent<StructureUI>().Unfocus();
-        _focusedStructure = null;
-        UnhighlightDisconnectedPorts();
+        if (!_isFocused) return;
+        _isFocused = false;
+
+        if (structureUI && _focusedStructure != null)
+        {
+            _focusedStructure.GetComponent<StructureUI>().Unfocus();
+            _focusedStructure = null;
+        }
+        if (portUI)
+        {
+            UnhighlightDisconnectedPorts(excludePorts);
+        }
+    }
+
+    public void UnfocusStructureAll()
+    {
+        UnfocusStructure();
+    }
+
+    public bool IsFocused()
+    {
+        return _isFocused;
     }
 
     public void HighlightDisconnectedPorts(Vector3 center, float radius = 0, List<Components.Port> excludePorts = null)

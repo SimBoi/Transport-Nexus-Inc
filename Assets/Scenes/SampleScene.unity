@@ -686,7 +686,7 @@ MonoBehaviour:
         m_Calls:
         - m_Target: {fileID: 1709670103}
           m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
-          m_MethodName: UnfocusStructure
+          m_MethodName: UnfocusStructureAll
           m_Mode: 1
           m_Arguments:
             m_ObjectArgument: {fileID: 0}
@@ -877,7 +877,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1c652448ab0c5fe4d8f417c28055bc33, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  wirePrefab: {fileID: 6396284025751597323, guid: 6b079dd2640acb2438cf12267adcf1cc, type: 3}
   portUIPrefab: {fileID: 781856674227519226, guid: f682d593ab29fa145a4ba5110ef58ff5, type: 3}
 --- !u!1 &2087159256
 GameObject:

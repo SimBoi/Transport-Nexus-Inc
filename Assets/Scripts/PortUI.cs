@@ -11,7 +11,7 @@ public class PortUI : MonoBehaviour
 
     public void StartDrag(BaseEventData eventData)
     {
-        GameManager.Instance.UnhighlightDisconnectedPorts(new List<Port> { port });
+        GameManager.Instance.UnfocusStructure(excludePorts: new List<Port> { port });
         GameManager.Instance.HighlightDisconnectedPorts(port.transform.position, 5, new List<Port> { port });
         _draggedWireResizer = Instantiate(wirePrefab, port.transform.position, Quaternion.identity).GetComponent<AutoWireResizer>();
         _draggedWireResizer.SetStart(port.transform.position);
@@ -30,6 +30,8 @@ public class PortUI : MonoBehaviour
 
     public void EndDrag(BaseEventData eventData)
     {
+        if (GameManager.Instance.IsFocused()) return;
+
         // raycast to find the end port
         Ray ray = Camera.main.ScreenPointToRay(((PointerEventData)eventData).position);
         if (Physics.Raycast(ray, out RaycastHit result))
@@ -47,6 +49,9 @@ public class PortUI : MonoBehaviour
             }
         }
         GameManager.Instance.UnhighlightDisconnectedPorts();
-        GameManager.Instance.HighlightDisconnectedPorts(port.transform.position, 0);
+
+        // refocus the structure containing the port
+        GameObject portStructure = port.GetComponentInParent<StructureUI>().gameObject;
+        GameManager.Instance.FocusStructure(portStructure);
     }
 }
