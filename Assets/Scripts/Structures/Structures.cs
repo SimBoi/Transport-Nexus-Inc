@@ -19,7 +19,7 @@ namespace Structures
 
         public void RemovePort(Port port)
         {
-            foreach (TaggedUndirectedEdge<Port, GameObject> edge in _graph.AdjacentEdges(port)) DisconnectWire(edge.Tag);
+            foreach (TaggedUndirectedEdge<Port, GameObject> edge in _graph.AdjacentEdges(port).ToList()) DisconnectWire(edge.Tag);
             if (port.isConnected) _signalChannels.Remove(port.signalChannel);
             _graph.RemoveVertex(port);
         }
@@ -71,6 +71,8 @@ namespace Structures
                 AssignSignalChannelBFS(port1, null, true);
                 AssignSignalChannelBFS(port2, null, false);
             }
+
+            Object.Destroy(wire);
         }
 
         public void AssignSignalChannelBFS(Port startPort, SignalChannel signalChannel, bool removeOldChannel = true)

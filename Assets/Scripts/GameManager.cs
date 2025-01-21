@@ -145,6 +145,7 @@ public class GameManager : MonoBehaviour
         if (_sensors.ContainsKey(tile))
         {
             structure = _sensors[tile].gameObject;
+            _sensors[tile].outputPort.RemoveFromNetwork();
             _sensors.Remove(tile);
         }
         else if (_processors.ContainsKey(tile))
@@ -155,13 +156,15 @@ public class GameManager : MonoBehaviour
             if (processor.IsInputChained()) processor.Unchain();
             if (processor.IsOutputChained()) processor.UnchainOutput();
 
-            // TODO: remove wiring connections
+            foreach (Structures.Port inputPort in processor.inputPorts) inputPort.RemoveFromNetwork();
+            processor.outputPort.RemoveFromNetwork();
 
             _processors.Remove(tile);
         }
         else if (_actuators.ContainsKey(tile))
         {
             structure = _actuators[tile].gameObject;
+            foreach (Structures.Port inputPort in _actuators[tile].inputPorts) inputPort.RemoveFromNetwork();
             _actuators.Remove(tile);
         }
         else
