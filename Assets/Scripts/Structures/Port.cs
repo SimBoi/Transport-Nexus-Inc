@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Components
+namespace Structures
 {
     public class Port : MonoBehaviour, IComparable<Port>
     {

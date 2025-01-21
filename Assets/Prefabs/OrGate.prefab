@@ -49,6 +49,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 93524cc8c29f0f84a90cb5dfc847eae5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  prefab: {fileID: 33510936106245419}
   inputPorts:
   - {fileID: 4322252366833466870}
   - {fileID: 2280273969428902065}

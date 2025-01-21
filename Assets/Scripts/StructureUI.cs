@@ -7,6 +7,7 @@ public class StructureUI : MonoBehaviour
     public void Focus()
     {
         ui.SetActive(true);
+        ui.transform.rotation = Quaternion.LookRotation(Camera.main.transform.forward, Vector3.up);
     }
 
     public void Unfocus()

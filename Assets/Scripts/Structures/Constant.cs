@@ -1,4 +1,4 @@
-using Components;
+using Structures;
 using UnityEngine;
 
 public class Constant : Sensor

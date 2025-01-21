@@ -3,7 +3,7 @@ using UnityEngine;
 using QuikGraph;
 using System.Linq;
 
-namespace Components
+namespace Structures
 {
     public class SignalNetworkGraph
     {
@@ -132,6 +132,7 @@ namespace Components
 
     public class Sensor : MonoBehaviour
     {
+        [HideInInspector] public GameObject prefab; // must be set by the instantiator
         public SignalNetworkGraph network { get; private set; }
         [SerializeField] public Port outputPort;
 
@@ -151,6 +152,7 @@ namespace Components
 
     public class Processor : MonoBehaviour
     {
+        [HideInInspector] public GameObject prefab; // must be set by the instantiator
         public SignalNetworkGraph network { get; private set; }
         [SerializeField] public Port[] inputPorts;
         [SerializeField] public Port outputPort;
@@ -248,6 +250,7 @@ namespace Components
 
     public class Actuator : MonoBehaviour
     {
+        [HideInInspector] public GameObject prefab; // must be set by the instantiator
         public SignalNetworkGraph network { get; private set; }
         [SerializeField] public Port[] inputPorts;
 

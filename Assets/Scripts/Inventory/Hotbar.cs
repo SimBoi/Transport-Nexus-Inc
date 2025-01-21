@@ -21,7 +21,7 @@ public class Hotbar : MonoBehaviour
     private GameObject selectedSlot = null;
     private bool isPointerInsideSelectedSlot = false;
     private GameObject draggedItem = null;
-    private Vector2Int orientation = Vector2Int.up;
+    public Vector2Int placementOrientation = Vector2Int.up;
 
     private void Start()
     {
@@ -109,7 +109,11 @@ public class Hotbar : MonoBehaviour
         }
         else
         {
-            if (!draggedItem.activeSelf) draggedItem.SetActive(true);
+            if (!draggedItem.activeSelf)
+            {
+                GameManager.Instance.UnfocusStructure();
+                draggedItem.SetActive(true);
+            }
 
             // move the dragged item with the pointer
             Ray ray = Camera.main.ScreenPointToRay(((PointerEventData)data).position);
@@ -132,7 +136,7 @@ public class Hotbar : MonoBehaviour
         {
             Vector3 hitPoint = result.point + result.normal * 0.01f;
             Vector2Int position = Vector2Int.RoundToInt(new Vector2(hitPoint.x, hitPoint.z));
-            GameManager.Instance.AddStructure(position, orientation, hotbar[selectedItemindex].prefab);
+            GameManager.Instance.AddStructure(position, placementOrientation, hotbar[selectedItemindex].prefab);
         }
     }
 

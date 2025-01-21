@@ -49,6 +49,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e0e9f9a3730ac34abef019402c653a5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  prefab: {fileID: 185028005426490139}
   outputPort: {fileID: 3165189654588430616}
   _value: 1
 --- !u!114 &14972942831900650
