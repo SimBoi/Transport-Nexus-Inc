@@ -878,7 +878,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   portUIPrefab: {fileID: 781856674227519226, guid: f682d593ab29fa145a4ba5110ef58ff5, type: 3}
-  buildingUIPrefab: {fileID: 5905559365856922510, guid: 90c5ffb1b59fe0540a81369b41cead4c, type: 3}
+  buildingUIPrefab: {fileID: 3552425056937049675, guid: 90c5ffb1b59fe0540a81369b41cead4c, type: 3}
 --- !u!1 &2087159256
 GameObject:
   m_ObjectHideFlags: 0

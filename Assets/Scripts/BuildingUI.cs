@@ -11,4 +11,9 @@ public class BuildingUI : MonoBehaviour
     {
         GameManager.Instance.RotateStructure(structure);
     }
+
+    public void RemoveStructure(BaseEventData eventData)
+    {
+        GameManager.Instance.RemoveStructure(structure);
+    }
 }

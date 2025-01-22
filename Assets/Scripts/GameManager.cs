@@ -138,6 +138,12 @@ public class GameManager : MonoBehaviour
         AddStructure(tile, newOrientation, prefab);
     }
 
+    public void RemoveStructure(GameObject structure)
+    {
+        Vector2Int tile = new Vector2Int(Mathf.RoundToInt(structure.transform.position.x), Mathf.RoundToInt(structure.transform.position.z));
+        RemoveStructure(tile);
+    }
+
     public void RemoveStructure(Vector2Int tile)
     {
         GameObject structure;
@@ -174,6 +180,8 @@ public class GameManager : MonoBehaviour
 
         _tiles.Remove(tile);
 
+        if (_isFocused && _focusedStructure == structure) UnfocusStructure();
+
         Destroy(structure);
     }
 
@@ -199,7 +207,7 @@ public class GameManager : MonoBehaviour
         {
             if (_buildingUI != null) Destroy(_buildingUI);
             Vector3 cameraDirection = Camera.main.transform.forward;
-            Vector3 position = structure.transform.position - cameraDirection * 0.5f;
+            Vector3 position = structure.transform.position - cameraDirection * 0.5f + new Vector3(-0.75f, 0, -0.75f);
             Quaternion rotation = Quaternion.LookRotation(-cameraDirection, Vector3.up);
             _buildingUI = Instantiate(buildingUIPrefab, position, rotation);
             _buildingUI.GetComponent<BuildingUI>().structure = structure;
