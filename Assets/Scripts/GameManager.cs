@@ -7,7 +7,7 @@ public class GameManager : MonoBehaviour
 
     private Dictionary<Vector2Int, (Vector2Int orientation, object structure)> _tiles = new();
 
-    public Structures.SignalNetworkGraph signalNetworkGraph { get; private set; } = new();
+    public Signals.PortNetworkGraph signalNetworkGraph { get; private set; } = new();
     private Dictionary<Vector2Int, Structures.Sensor> _sensors = new();
     private Dictionary<Vector2Int, Structures.Processor> _processors = new();
     private Dictionary<Vector2Int, Structures.Actuator> _actuators = new();
@@ -162,7 +162,7 @@ public class GameManager : MonoBehaviour
             if (processor.IsInputChained()) processor.Unchain();
             if (processor.IsOutputChained()) processor.UnchainOutput();
 
-            foreach (Structures.Port inputPort in processor.inputPorts) inputPort.RemoveFromNetwork();
+            foreach (Signals.Port inputPort in processor.inputPorts) inputPort.RemoveFromNetwork();
             processor.outputPort.RemoveFromNetwork();
 
             _processors.Remove(tile);
@@ -170,7 +170,7 @@ public class GameManager : MonoBehaviour
         else if (_actuators.ContainsKey(tile))
         {
             structure = _actuators[tile].gameObject;
-            foreach (Structures.Port inputPort in _actuators[tile].inputPorts) inputPort.RemoveFromNetwork();
+            foreach (Signals.Port inputPort in _actuators[tile].inputPorts) inputPort.RemoveFromNetwork();
             _actuators.Remove(tile);
         }
         else
@@ -189,7 +189,7 @@ public class GameManager : MonoBehaviour
     /////////////////////////////////////////// UI /////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public void FocusStructure(GameObject structure, bool structureUI = true, bool portUI = true, List<Structures.Port> excludePorts = null, bool buildingUI = true)
+    public void FocusStructure(GameObject structure, bool structureUI = true, bool portUI = true, List<Signals.Port> excludePorts = null, bool buildingUI = true)
     {
         if (_isFocused) UnfocusStructure();
         _isFocused = true;
@@ -214,7 +214,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void UnfocusStructure(bool structureUI = true, bool portUI = true, List<Structures.Port> excludePorts = null, bool buildingUI = true)
+    public void UnfocusStructure(bool structureUI = true, bool portUI = true, List<Signals.Port> excludePorts = null, bool buildingUI = true)
     {
         if (!_isFocused) return;
         _isFocused = false;
@@ -245,7 +245,7 @@ public class GameManager : MonoBehaviour
         return _isFocused;
     }
 
-    public void HighlightDisconnectedPorts(Vector3 center, float radius = 0, List<Structures.Port> excludePorts = null)
+    public void HighlightDisconnectedPorts(Vector3 center, float radius = 0, List<Signals.Port> excludePorts = null)
     {
         // go through all the tiles in a 2*radius square around the center and highlight the ports
         for (int x = -Mathf.FloorToInt(radius); x <= Mathf.FloorToInt(radius); x++)
@@ -263,7 +263,7 @@ public class GameManager : MonoBehaviour
                 }
                 else if (structure is Structures.Processor processor)
                 {
-                    foreach (Structures.Port port in processor.inputPorts)
+                    foreach (Signals.Port port in processor.inputPorts)
                     {
                         if (excludePorts != null && excludePorts.Contains(port)) continue;
                         HighlightDisconnectedPort(port);
@@ -273,7 +273,7 @@ public class GameManager : MonoBehaviour
                 }
                 else if (structure is Structures.Actuator actuator)
                 {
-                    foreach (Structures.Port port in actuator.inputPorts)
+                    foreach (Signals.Port port in actuator.inputPorts)
                     {
                         if (excludePorts != null && excludePorts.Contains(port)) continue;
                         HighlightDisconnectedPort(port);
@@ -283,7 +283,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void HighlightDisconnectedPort(Structures.Port port)
+    public void HighlightDisconnectedPort(Signals.Port port)
     {
         if (port.isConnected) return;
 
@@ -295,7 +295,7 @@ public class GameManager : MonoBehaviour
         _highlightedPorts.Add(portUI);
     }
 
-    public void UnhighlightDisconnectedPorts(List<Structures.Port> excludePorts = null)
+    public void UnhighlightDisconnectedPorts(List<Signals.Port> excludePorts = null)
     {
         List<GameObject> portsToKeep = new();
         foreach (GameObject portUI in _highlightedPorts)
@@ -306,7 +306,7 @@ public class GameManager : MonoBehaviour
         _highlightedPorts = portsToKeep;
     }
 
-    public void ConnectWire(Structures.Port port1, Structures.Port port2, GameObject wire)
+    public void ConnectWire(Signals.Port port1, Signals.Port port2, GameObject wire)
     {
         signalNetworkGraph.ConnectWire(wire, port1, port2);
     }

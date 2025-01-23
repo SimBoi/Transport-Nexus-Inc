@@ -1,15 +1,15 @@
 using System;
 using UnityEngine;
 
-namespace Structures
+namespace Signals
 {
     public class Port : MonoBehaviour, IComparable<Port>
     {
-        public SignalNetworkGraph network { get; private set; }
-        public SignalChannel signalChannel { get; set; }
+        public PortNetworkGraph network { get; private set; }
+        public Channel signalChannel { get; set; }
         public bool isConnected => signalChannel != null;
 
-        public void AddToNetwork(SignalNetworkGraph signalNetworkGraph)
+        public void AddToNetwork(PortNetworkGraph signalNetworkGraph)
         {
             if (network != null) throw new Exception("Port already in a network.");
             network = signalNetworkGraph;
