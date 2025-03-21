@@ -32,6 +32,9 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject railExtenderPrefab;
     private List<GameObject> _railExtenders = new();
 
+    [SerializeField] private Transform powerLevels;
+    [SerializeField] private GameObject powerLevelUIPrefab;
+
     private void Awake()
     {
         if (Instance == null) Instance = this;
@@ -285,6 +288,9 @@ public class GameManager : MonoBehaviour
     public void ConnectWire(Port port1, Port port2, GameObject wire)
     {
         signalNetworkGraph.ConnectWire(wire, port1, port2);
+
+        GameObject powerLevelUI = Instantiate(powerLevelUIPrefab, powerLevels);
+        powerLevelUI.GetComponent<PowerLevelUI>().Initialize(port1, port2);
     }
 
     public void DisconnectWire(GameObject wire)
