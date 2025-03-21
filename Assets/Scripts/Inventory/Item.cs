@@ -5,12 +5,56 @@ using UnityEngine;
 namespace Inventories
 {
     [Serializable]
+    public enum ItemType
+    {
+        Structure,
+        Locomotive,
+        CargoCart,
+        FluidCart
+    }
+
+    [Serializable]
     public class Item : MonoBehaviour
     {
         public string itemName;
         public Sprite icon;
-        public GameObject prefab;
+        public ItemType type;
         [HideInInspector] public int[] materialCosts = new int[Enum.GetValues(typeof(Materials)).Length];
+
+        public bool Place(Vector3 position, Vector2Int placementOrientation, Collider collider)
+        {
+            if (!GameManager.Instance.HasMaterials(materialCosts)) return false;
+
+            if (type == ItemType.Structure)
+            {
+                Vector2Int tile = Vector2Int.RoundToInt(new Vector2(position.x, position.z));
+                if (!GameManager.Instance.AddStructure(tile, placementOrientation, gameObject)) return false;
+            }
+            else if (type == ItemType.Locomotive)
+            {
+                Vector2Int tile = Vector2Int.RoundToInt(new Vector2(position.x, position.z));
+                if (!GameManager.Instance.BuildTrain(tile)) return false;
+            }
+            else if (type == ItemType.CargoCart)
+            {
+                Train train = collider.GetComponentInParent<Train>();
+                if (train == null || !train.AddCart(CartType.Cargo)) return false;
+            }
+            else if (type == ItemType.FluidCart)
+            {
+                Train train = collider.GetComponentInParent<Train>();
+                if (train == null || !train.AddCart(CartType.Fluid)) return false;
+            }
+
+            GameManager.Instance.SpendMaterials(materialCosts);
+            return true;
+        }
+
+        public void Destroy()
+        {
+            GameManager.Instance.AddMaterials(materialCosts);
+            Destroy(gameObject);
+        }
     }
 
     [CustomEditor(typeof(Item))]

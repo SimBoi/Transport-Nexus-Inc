@@ -11,7 +11,7 @@ public class PortUI : MonoBehaviour
 
     public void StartDrag(BaseEventData eventData)
     {
-        GameManager.Instance.UnfocusStructure(excludePorts: new List<Port> { port });
+        GameManager.Instance.Unfocus(excludePorts: new List<Port> { port });
         GameManager.Instance.HighlightDisconnectedPorts(port.transform.position, 5, new List<Port> { port });
         _draggedWireResizer = Instantiate(wirePrefab, port.transform.position, Quaternion.identity).GetComponent<AutoWireResizer>();
         _draggedWireResizer.SetStart(port.transform.position);

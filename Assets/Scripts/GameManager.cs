@@ -1,23 +1,36 @@
 using System.Collections.Generic;
+using Structures;
+using Signals;
 using UnityEngine;
+using System;
+using Inventories;
+using UnityEditor;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    private Dictionary<Vector2Int, (Vector2Int orientation, object structure)> _tiles = new();
+    [HideInInspector] public int[] materials = new int[Enum.GetValues(typeof(Materials)).Length];
 
-    public Signals.PortNetworkGraph signalNetworkGraph { get; private set; } = new();
-    private Dictionary<Vector2Int, Structures.Sensor> _sensors = new();
-    private Dictionary<Vector2Int, Structures.Processor> _processors = new();
-    private Dictionary<Vector2Int, Structures.Actuator> _actuators = new();
+    private Dictionary<Vector2Int, (Vector2Int orientation, Structure structure)> _tiles = new();
+
+    public PortNetworkGraph signalNetworkGraph { get; private set; } = new();
+    private Dictionary<Vector2Int, Sensor> _sensors = new();
+    private Dictionary<Vector2Int, Processor> _processors = new();
+    private Dictionary<Vector2Int, Actuator> _actuators = new();
+    private Dictionary<Vector2Int, Structure> _rails = new();
+    private List<Train> _trains = new();
 
     private bool _isFocused = false;
     private GameObject _focusedStructure;
+    private GameObject _focusedTrain;
     [SerializeField] private GameObject portUIPrefab;
     private List<GameObject> _highlightedPorts = new();
     [SerializeField] private GameObject buildingUIPrefab;
     private GameObject _buildingUI;
+    [SerializeField] private GameObject trainPrefab;
+    [SerializeField] private GameObject railExtenderPrefab;
+    private List<GameObject> _railExtenders = new();
 
     private void Awake()
     {
@@ -28,6 +41,7 @@ public class GameManager : MonoBehaviour
     void FixedUpdate()
     {
         Tick();
+        CheckTrainCollisions();
     }
 
     private void Tick()
@@ -36,41 +50,103 @@ public class GameManager : MonoBehaviour
         signalNetworkGraph.ResetSignalChannels();
 
         // Step 2: Read all sensors
-        foreach (Structures.Sensor sensor in _sensors.Values) sensor.Read();
+        foreach (Sensor sensor in _sensors.Values) sensor.Read();
 
         // Step 3: Advance all processor output queues
-        foreach (Structures.Processor processor in _processors.Values) processor.AdvanceOutputQueue();
+        foreach (Processor processor in _processors.Values) processor.AdvanceOutputQueue();
 
         // Step 4: Process all processors and write to output queues
-        foreach (Structures.Processor processor in _processors.Values) processor.Process();
+        foreach (Processor processor in _processors.Values) processor.Process();
 
         // Step 5: Write all actuators
-        foreach (Structures.Actuator actuator in _actuators.Values) actuator.Write();
+        foreach (Actuator actuator in _actuators.Values) actuator.Write();
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////// Materials //////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public bool HasMaterials(int[] costs)
+    {
+        for (int i = 0; i < costs.Length; i++)
+        {
+            if (materials[i] < costs[i]) return false;
+        }
+        return true;
+    }
+
+    public void SpendMaterials(int[] costs)
+    {
+        for (int i = 0; i < costs.Length; i++)
+        {
+            materials[i] -= costs[i];
+        }
+    }
+
+    public void AddMaterials(int[] gains)
+    {
+        for (int i = 0; i < gains.Length; i++)
+        {
+            materials[i] += gains[i];
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////// Tile Management ///////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public void AddStructure(Vector2Int tile, Vector2Int orientation, GameObject structurePrefab)
+    public bool AddStructure(Vector2Int tile, Vector2Int orientation, GameObject structurePrefab)
     {
+        if (_tiles.ContainsKey(tile)) return false;
+
         Vector3 position = new Vector3(tile.x, 0, tile.y);
         Quaternion rotation = Quaternion.LookRotation(new Vector3(orientation.x, 0, orientation.y), Vector3.up);
         GameObject instantiatedStructure;
 
-        if (structurePrefab.GetComponent<Structures.Sensor>())
+        if (structurePrefab.GetComponent<DynamicRail>())
         {
             instantiatedStructure = Instantiate(structurePrefab, position, rotation);
-            Structures.Sensor sensor = instantiatedStructure.GetComponent<Structures.Sensor>();
+            DynamicRail dynamicRail = instantiatedStructure.GetComponent<DynamicRail>();
+            dynamicRail.prefab = structurePrefab;
+            _tiles.Add(tile, (orientation, dynamicRail));
+            _rails.Add(tile, dynamicRail);
+            ConnectRail(tile);
+        }
+        else if (structurePrefab.GetComponent<SensorRail>())
+        {
+            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            SensorRail sensorRail = instantiatedStructure.GetComponent<SensorRail>();
+            sensorRail.prefab = structurePrefab;
+            _tiles.Add(tile, (orientation, sensorRail));
+            _rails.Add(tile, sensorRail);
+            _sensors.Add(tile, sensorRail);
+            sensorRail.Initialize(signalNetworkGraph);
+            ConnectRail(tile);
+        }
+        else if (structurePrefab.GetComponent<ActuatorRail>())
+        {
+            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            ActuatorRail actuatorRail = instantiatedStructure.GetComponent<ActuatorRail>();
+            actuatorRail.prefab = structurePrefab;
+            _tiles.Add(tile, (orientation, actuatorRail));
+            _rails.Add(tile, actuatorRail);
+            _actuators.Add(tile, actuatorRail);
+            actuatorRail.Initialize(signalNetworkGraph);
+            ConnectRail(tile);
+        }
+        else if (structurePrefab.GetComponent<Sensor>())
+        {
+            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            Sensor sensor = instantiatedStructure.GetComponent<Sensor>();
             sensor.prefab = structurePrefab;
             _tiles.Add(tile, (orientation, sensor));
             _sensors.Add(tile, sensor);
             sensor.Initialize(signalNetworkGraph);
         }
-        else if (structurePrefab.GetComponent<Structures.Processor>())
+        else if (structurePrefab.GetComponent<Processor>())
         {
             instantiatedStructure = Instantiate(structurePrefab, position, rotation);
-            Structures.Processor processor = instantiatedStructure.GetComponent<Structures.Processor>();
+            Processor processor = instantiatedStructure.GetComponent<Processor>();
             processor.prefab = structurePrefab;
             _tiles.Add(tile, (orientation, processor));
             _processors.Add(tile, processor);
@@ -81,25 +157,25 @@ public class GameManager : MonoBehaviour
             Vector2Int frontTile = tile + orientation;
             if (_tiles.ContainsKey(behindTile))
             {
-                (Vector2Int orientation, object structure) behindStructure = _tiles[behindTile];
-                if (behindStructure.structure is Structures.Processor inputProcessor && behindStructure.orientation == orientation)
+                (Vector2Int orientation, Structure structure) behindStructure = _tiles[behindTile];
+                if (behindStructure.structure is Processor inputProcessor && behindStructure.orientation == orientation)
                 {
                     processor.Chain(inputProcessor);
                 }
             }
             if (_tiles.ContainsKey(frontTile))
             {
-                (Vector2Int orientation, object structure) frontStructure = _tiles[frontTile];
-                if (frontStructure.structure is Structures.Processor outputProcessor && frontStructure.orientation == orientation)
+                (Vector2Int orientation, Structure structure) frontStructure = _tiles[frontTile];
+                if (frontStructure.structure is Processor outputProcessor && frontStructure.orientation == orientation)
                 {
                     outputProcessor.Chain(processor);
                 }
             }
         }
-        else if (structurePrefab.GetComponent<Structures.Actuator>())
+        else if (structurePrefab.GetComponent<Actuator>())
         {
             instantiatedStructure = Instantiate(structurePrefab, position, rotation);
-            Structures.Actuator actuator = instantiatedStructure.GetComponent<Structures.Actuator>();
+            Actuator actuator = instantiatedStructure.GetComponent<Actuator>();
             actuator.prefab = structurePrefab;
             _tiles.Add(tile, (orientation, actuator));
             _actuators.Add(tile, actuator);
@@ -107,10 +183,11 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            throw new System.Exception("Invalid structure type");
+            throw new Exception("Invalid structure type");
         }
 
         FocusStructure(instantiatedStructure);
+        return true;
     }
 
     public void RotateStructure(GameObject structure, Vector2Int orientation = default)
@@ -121,34 +198,53 @@ public class GameManager : MonoBehaviour
 
     public void RotateStructure(Vector2Int tile, Vector2Int orientation = default)
     {
-        if (!_tiles.ContainsKey(tile)) throw new System.Exception("No structure found at position: " + tile);
+        if (!_tiles.ContainsKey(tile)) throw new Exception("No structure found at position: " + tile);
 
-        (Vector2Int oldOrientation, object structure) = _tiles[tile];
+        (Vector2Int oldOrientation, Structure structure) = _tiles[tile];
         if (oldOrientation == orientation) return;
         Vector2Int newOrientation = orientation == default ? new Vector2Int(oldOrientation.y, -oldOrientation.x) : orientation;
-        GameObject prefab = structure switch
-        {
-            Structures.Sensor _ => _sensors[tile].prefab,
-            Structures.Processor _ => _processors[tile].prefab,
-            Structures.Actuator _ => _actuators[tile].prefab,
-            _ => throw new System.Exception("Invalid structure type")
-        };
 
-        RemoveStructure(tile);
-        AddStructure(tile, newOrientation, prefab);
+        if (!RemoveStructure(tile)) return;
+        AddStructure(tile, newOrientation, structure.prefab);
     }
 
-    public void RemoveStructure(GameObject structure)
+    public bool RemoveStructure(GameObject structure)
     {
         Vector2Int tile = new Vector2Int(Mathf.RoundToInt(structure.transform.position.x), Mathf.RoundToInt(structure.transform.position.z));
-        RemoveStructure(tile);
+        return RemoveStructure(tile);
     }
 
-    public void RemoveStructure(Vector2Int tile)
+    public bool RemoveStructure(Vector2Int tile)
     {
         GameObject structure;
 
-        if (_sensors.ContainsKey(tile))
+        if (_rails.ContainsKey(tile))
+        {
+            if (_rails[tile] is DynamicRail dynamicRail && dynamicRail.trains.Count > 0) return false;
+            if (_rails[tile] is SensorRail sensorRail && sensorRail.trains.Count > 0) return false;
+            if (_rails[tile] is ActuatorRail actuatorRail && actuatorRail.trains.Count > 0) return false;
+
+            if (_sensors.ContainsKey(tile))
+            {
+                structure = _sensors[tile].gameObject;
+                _sensors[tile].outputPort.RemoveFromNetwork();
+                _sensors.Remove(tile);
+            }
+            else if (_actuators.ContainsKey(tile))
+            {
+                structure = _actuators[tile].gameObject;
+                foreach (Port inputPort in _actuators[tile].inputPorts) inputPort.RemoveFromNetwork();
+                _actuators.Remove(tile);
+            }
+            else
+            {
+                structure = ((DynamicRail)_rails[tile]).gameObject;
+            }
+
+            DisconnectRail(tile);
+            _rails.Remove(tile);
+        }
+        else if (_sensors.ContainsKey(tile))
         {
             structure = _sensors[tile].gameObject;
             _sensors[tile].outputPort.RemoveFromNetwork();
@@ -157,12 +253,12 @@ public class GameManager : MonoBehaviour
         else if (_processors.ContainsKey(tile))
         {
             structure = _processors[tile].gameObject;
-            Structures.Processor processor = _processors[tile];
+            Processor processor = _processors[tile];
 
             if (processor.IsInputChained()) processor.Unchain();
             if (processor.IsOutputChained()) processor.UnchainOutput();
 
-            foreach (Signals.Port inputPort in processor.inputPorts) inputPort.RemoveFromNetwork();
+            foreach (Port inputPort in processor.inputPorts) inputPort.RemoveFromNetwork();
             processor.outputPort.RemoveFromNetwork();
 
             _processors.Remove(tile);
@@ -170,28 +266,160 @@ public class GameManager : MonoBehaviour
         else if (_actuators.ContainsKey(tile))
         {
             structure = _actuators[tile].gameObject;
-            foreach (Signals.Port inputPort in _actuators[tile].inputPorts) inputPort.RemoveFromNetwork();
+            foreach (Port inputPort in _actuators[tile].inputPorts) inputPort.RemoveFromNetwork();
             _actuators.Remove(tile);
         }
         else
         {
-            throw new System.Exception("No structure found at position: " + tile);
+            throw new Exception("No structure found at position: " + tile);
         }
 
         _tiles.Remove(tile);
 
-        if (_isFocused && _focusedStructure == structure) UnfocusStructure();
+        if (_isFocused && _focusedStructure == structure) Unfocus();
 
-        Destroy(structure);
+        structure.GetComponent<Item>().Destroy();
+        return true;
+    }
+
+    public void ConnectWire(Port port1, Port port2, GameObject wire)
+    {
+        signalNetworkGraph.ConnectWire(wire, port1, port2);
+    }
+
+    public void DisconnectWire(GameObject wire)
+    {
+        signalNetworkGraph.DisconnectWire(wire);
+        Destroy(wire);
+    }
+
+    public void ConnectRail(Vector2Int tile)
+    {
+        if (!_rails.ContainsKey(tile)) throw new System.Exception("No rail found at position: " + tile);
+
+        // find the possible neighbors of the rail
+        Vector2Int[] neighbors;
+        if (_rails[tile] is DynamicRail)
+        {
+            neighbors = new Vector2Int[4] {
+                Vector2Int.down,
+                Vector2Int.right,
+                Vector2Int.up,
+                Vector2Int.left
+            };
+        }
+        else
+        {
+            (Vector2Int orientation, _) = _tiles[tile];
+            neighbors = new Vector2Int[2] {
+                orientation,
+                -orientation
+            };
+        }
+
+        // find compatible connections with neighbors
+        List<Vector2Int> compatibleConnections = new();
+        foreach (Vector2Int neighborDir in neighbors)
+        {
+            Vector2Int neighborTile = tile + neighborDir;
+            if (!_rails.ContainsKey(neighborTile)) continue;
+
+            if (_rails[neighborTile] is DynamicRail neighborRail)
+            {
+                if (!neighborRail.CanConnect(-neighborDir)) continue;
+                compatibleConnections.Add(neighborDir);
+            }
+            else
+            {
+                (Vector2Int orientation, _) = _tiles[neighborTile];
+                if (orientation == neighborDir || orientation == -neighborDir) compatibleConnections.Add(neighborDir);
+            }
+
+            if (compatibleConnections.Count == 2) break;
+        }
+
+        // orient the rail if its a dynamic rail
+        if (_tiles[tile].structure is DynamicRail) foreach (Vector2Int dir in compatibleConnections) ((DynamicRail)_rails[tile]).Connect(dir);
+
+        // reorient neighbors
+        foreach (Vector2Int dir in compatibleConnections) if (_rails[tile + dir] is DynamicRail neighborRail) neighborRail.Connect(-dir);
+    }
+
+    public void DisconnectRail(Vector2Int tile)
+    {
+        // get the neighbors of the rail
+        List<Vector2Int> neighbors;
+        if (_rails[tile] is DynamicRail)
+        {
+            DynamicRail dynamicRail = (DynamicRail)_rails[tile];
+
+            neighbors = new();
+            foreach (Vector2Int dir in dynamicRail.connections) neighbors.Add(dir);
+
+            // disconnect the rail from its neighbors
+            foreach (Vector2Int dir in neighbors) dynamicRail.Disconnect(dir);
+        }
+        else
+        {
+            (Vector2Int orientation, _) = _tiles[tile];
+            neighbors = new List<Vector2Int> { orientation, -orientation };
+        }
+
+        // disconnect the neighbors from the rail
+        foreach (Vector2Int dir in neighbors) if (_rails.ContainsKey(tile + dir) && _rails[tile + dir] is DynamicRail neighborRail && neighborRail.connections.Contains(-dir)) neighborRail.Disconnect(-dir);
+    }
+
+    public List<Vector2Int> GetTrainOrientations(Vector2Int tile)
+    {
+        if (!_rails.ContainsKey(tile)) return new List<Vector2Int>();
+
+        if (_rails[tile] is DynamicRail dynamicRail) return dynamicRail.trainOrientations;
+        else
+        {
+            (Vector2Int orientation, _) = _tiles[tile];
+            return new List<Vector2Int>(2) { orientation, -orientation };
+        }
+    }
+
+    private void CheckTrainCollisions()
+    {
+        // go over all unique pairs of trains and check for collisions
+        for (int i = 0; i < _trains.Count; i++)
+        {
+            Train train1 = _trains[i];
+            for (int j = i + 1; j < _trains.Count; j++)
+            {
+                Train train2 = _trains[j];
+
+                if (train1.isCrashed && train2.isCrashed) continue;
+
+                // check the leading and trailing carts of each train for collisions
+                Collider lead1 = train1.carts[0].GetComponent<Collider>();
+                Collider tail1 = train1.carts[train1.carts.Count - 1].GetComponent<Collider>();
+                Collider lead2 = train2.carts[0].GetComponent<Collider>();
+                Collider tail2 = train2.carts[train2.carts.Count - 1].GetComponent<Collider>();
+
+                if (lead1.bounds.Intersects(lead2.bounds) || lead1.bounds.Intersects(tail2.bounds) || tail1.bounds.Intersects(lead2.bounds) || tail1.bounds.Intersects(tail2.bounds))
+                {
+                    train1.Crash();
+                    train2.Crash();
+                }
+            }
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////// UI /////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public void FocusStructure(GameObject structure, bool structureUI = true, bool portUI = true, List<Signals.Port> excludePorts = null, bool buildingUI = true)
+    public bool IsFocused()
     {
-        if (_isFocused) UnfocusStructure();
+        return _isFocused;
+    }
+
+    public void FocusStructure(GameObject structure, bool structureUI = true, bool portUI = true, List<Port> excludePorts = null, bool buildingUI = true)
+    {
+        if (_isFocused) Unfocus();
         _isFocused = true;
         _focusedStructure = structure;
 
@@ -211,10 +439,105 @@ public class GameManager : MonoBehaviour
             Quaternion rotation = Quaternion.LookRotation(-cameraDirection, Vector3.up);
             _buildingUI = Instantiate(buildingUIPrefab, position, rotation);
             _buildingUI.GetComponent<BuildingUI>().structure = structure;
+
+            // show rail extenders if the structure is a rail
+            Vector2Int tile = new Vector2Int(Mathf.RoundToInt(structure.transform.position.x), Mathf.RoundToInt(structure.transform.position.z));
+            if (_rails.ContainsKey(tile))
+            {
+                if (_rails[tile] is DynamicRail dynamicRail)
+                {
+                    List<Vector2Int> orientations = new List<Vector2Int> { Vector2Int.down, Vector2Int.right, Vector2Int.up, Vector2Int.left };
+                    foreach (Vector2Int orientation in orientations) if (!_tiles.ContainsKey(tile + orientation) && dynamicRail.CanConnect(orientation)) ShowRailExtender(tile, orientation);
+                }
+                else
+                {
+                    List<Vector2Int> orientations = GetTrainOrientations(tile);
+                    foreach (Vector2Int orientation in orientations) if (!_tiles.ContainsKey(tile + orientation)) ShowRailExtender(tile, orientation);
+                }
+            }
         }
     }
 
-    public void UnfocusStructure(bool structureUI = true, bool portUI = true, List<Signals.Port> excludePorts = null, bool buildingUI = true)
+    public void HighlightDisconnectedPorts(Vector3 center, float radius = 0, List<Port> excludePorts = null)
+    {
+        // go through all the tiles in a 2*radius square around the center and highlight the ports
+        for (int x = -Mathf.FloorToInt(radius); x <= Mathf.FloorToInt(radius); x++)
+        {
+            for (int y = -Mathf.FloorToInt(radius); y <= Mathf.FloorToInt(radius); y++)
+            {
+                Vector2Int tile = new Vector2Int(x, y) + new Vector2Int(Mathf.FloorToInt(center.x), Mathf.FloorToInt(center.z));
+                if (!_tiles.ContainsKey(tile)) continue;
+
+                (Vector2Int _, Structure structure) = _tiles[tile];
+                if (structure is Sensor sensor)
+                {
+                    if (excludePorts != null && excludePorts.Contains(sensor.outputPort)) continue;
+                    HighlightDisconnectedPort(sensor.outputPort);
+                }
+                else if (structure is Processor processor)
+                {
+                    foreach (Port port in processor.inputPorts)
+                    {
+                        if (excludePorts != null && excludePorts.Contains(port)) continue;
+                        HighlightDisconnectedPort(port);
+                    }
+                    if (excludePorts != null && excludePorts.Contains(processor.outputPort)) continue;
+                    HighlightDisconnectedPort(processor.outputPort);
+                }
+                else if (structure is Actuator actuator)
+                {
+                    foreach (Port port in actuator.inputPorts)
+                    {
+                        if (excludePorts != null && excludePorts.Contains(port)) continue;
+                        HighlightDisconnectedPort(port);
+                    }
+                }
+            }
+        }
+    }
+
+    public void HighlightDisconnectedPort(Port port)
+    {
+        if (port.isConnected) return;
+
+        Vector3 cameraDirection = Camera.main.transform.forward;
+        Vector3 position = port.transform.position - cameraDirection * 0.5f;
+        Quaternion rotation = Quaternion.LookRotation(-cameraDirection, Vector3.up);
+        GameObject portUI = Instantiate(portUIPrefab, position, rotation);
+        portUI.GetComponent<PortUI>().port = port;
+        _highlightedPorts.Add(portUI);
+    }
+
+    public void UnhighlightDisconnectedPorts(List<Port> excludePorts = null)
+    {
+        List<GameObject> portsToKeep = new();
+        foreach (GameObject portUI in _highlightedPorts)
+        {
+            if (excludePorts != null && excludePorts.Contains(portUI.GetComponent<PortUI>().port)) portsToKeep.Add(portUI);
+            else Destroy(portUI);
+        }
+        _highlightedPorts = portsToKeep;
+    }
+
+    public void ShowRailExtender(Vector2Int tile, Vector2Int orientation)
+    {
+        tile += orientation;
+        Vector3 position = new Vector3(tile.x, 0, tile.y);
+        Quaternion rotation = Quaternion.LookRotation(new Vector3(orientation.x, 0, orientation.y), Vector3.up);
+        GameObject railExtender = Instantiate(railExtenderPrefab, position, rotation);
+        railExtender.GetComponent<RailExtender>().tile = tile;
+        _railExtenders.Add(railExtender);
+    }
+
+    public void FocusTrain(GameObject train)
+    {
+        if (_isFocused) Unfocus();
+        _isFocused = true;
+        _focusedTrain = train;
+        _focusedTrain.GetComponent<TrainUI>().Focus();
+    }
+
+    public void Unfocus(bool structureUI = true, bool portUI = true, List<Port> excludePorts = null, bool buildingUI = true, bool trainUI = true)
     {
         if (!_isFocused) return;
         _isFocused = false;
@@ -232,88 +555,90 @@ public class GameManager : MonoBehaviour
         {
             Destroy(_buildingUI);
             _buildingUI = null;
+
+            foreach (GameObject railExtender in _railExtenders) Destroy(railExtender);
+            _railExtenders.Clear();
+        }
+        if (trainUI && _focusedTrain != null)
+        {
+            _focusedTrain.GetComponent<TrainUI>().Unfocus();
+            _focusedTrain = null;
         }
     }
 
     public void UnfocusAll()
     {
-        UnfocusStructure();
+        Unfocus();
     }
 
-    public bool IsFocused()
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////// Trains /////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public bool CanBuildTrain(Vector2Int tile)
     {
-        return _isFocused;
+        if (!_rails.ContainsKey(tile)) return false;
+
+        if (_rails[tile] is DynamicRail dynamicRail) return dynamicRail.trains.Count == 0;
+        if (_rails[tile] is SensorRail sensorRail) return sensorRail.trains.Count == 0;
+        if (_rails[tile] is ActuatorRail actuatorRail) return actuatorRail.trains.Count == 0;
+
+        return false;
     }
 
-    public void HighlightDisconnectedPorts(Vector3 center, float radius = 0, List<Signals.Port> excludePorts = null)
+    public bool BuildTrain(Vector2Int tile)
     {
-        // go through all the tiles in a 2*radius square around the center and highlight the ports
-        for (int x = -Mathf.FloorToInt(radius); x <= Mathf.FloorToInt(radius); x++)
+        if (!_rails.ContainsKey(tile)) return false;
+        if (!(_rails[tile] is TrainStop trainStop) || trainStop.trains.Count > 0) return false;
+
+        Train train = Instantiate(trainPrefab, new Vector3(tile.x, 0, tile.y), Quaternion.identity).GetComponent<Train>();
+        train.Initialize(tile, _tiles[tile].orientation);
+        _trains.Add(train);
+        return true;
+    }
+
+    public void DestroyTrain(Train train)
+    {
+        _trains.Remove(train);
+        train.DestroyTrain();
+    }
+
+    public void TrainEnterTile(Train train, Vector2Int tile)
+    {
+        if (_rails[tile] is DynamicRail dynamicRail) dynamicRail.TrainEnter(train);
+        else if (_rails[tile] is SensorRail sensorRail) sensorRail.TrainEnter(train);
+        else if (_rails[tile] is ActuatorRail actuatorRail) actuatorRail.TrainEnter(train);
+    }
+
+    public void TrainExitTile(Train train, Vector2Int tile)
+    {
+        if (_rails[tile] is DynamicRail dynamicRail) dynamicRail.TrainExit(train);
+        else if (_rails[tile] is SensorRail sensorRail) sensorRail.TrainExit(train);
+        else if (_rails[tile] is ActuatorRail actuatorRail) actuatorRail.TrainExit(train);
+    }
+}
+
+[CustomEditor(typeof(GameManager))]
+public class GameManagerEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        GameManager manager = (GameManager)target;
+
+        // Draw the default inspector
+        DrawDefaultInspector();
+
+        // Custom display for materials array
+        EditorGUILayout.Space();
+        if (manager.materials != null && manager.materials.Length > 0)
         {
-            for (int y = -Mathf.FloorToInt(radius); y <= Mathf.FloorToInt(radius); y++)
+            EditorGUILayout.LabelField("Materials", EditorStyles.boldLabel);
+            for (int i = 0; i < manager.materials.Length; i++)
             {
-                Vector2Int tile = new Vector2Int(x, y) + new Vector2Int(Mathf.FloorToInt(center.x), Mathf.FloorToInt(center.z));
-                if (!_tiles.ContainsKey(tile)) continue;
-
-                (Vector2Int _, object structure) = _tiles[tile];
-                if (structure is Structures.Sensor sensor)
-                {
-                    if (excludePorts != null && excludePorts.Contains(sensor.outputPort)) continue;
-                    HighlightDisconnectedPort(sensor.outputPort);
-                }
-                else if (structure is Structures.Processor processor)
-                {
-                    foreach (Signals.Port port in processor.inputPorts)
-                    {
-                        if (excludePorts != null && excludePorts.Contains(port)) continue;
-                        HighlightDisconnectedPort(port);
-                    }
-                    if (excludePorts != null && excludePorts.Contains(processor.outputPort)) continue;
-                    HighlightDisconnectedPort(processor.outputPort);
-                }
-                else if (structure is Structures.Actuator actuator)
-                {
-                    foreach (Signals.Port port in actuator.inputPorts)
-                    {
-                        if (excludePorts != null && excludePorts.Contains(port)) continue;
-                        HighlightDisconnectedPort(port);
-                    }
-                }
+                EditorGUILayout.BeginHorizontal();
+                manager.materials[i] = EditorGUILayout.IntField(((Materials)i).ToString(), manager.materials[i]);
+                EditorGUILayout.EndHorizontal();
             }
         }
-    }
-
-    public void HighlightDisconnectedPort(Signals.Port port)
-    {
-        if (port.isConnected) return;
-
-        Vector3 cameraDirection = Camera.main.transform.forward;
-        Vector3 position = port.transform.position - cameraDirection * 0.5f;
-        Quaternion rotation = Quaternion.LookRotation(-cameraDirection, Vector3.up);
-        GameObject portUI = Instantiate(portUIPrefab, position, rotation);
-        portUI.GetComponent<PortUI>().port = port;
-        _highlightedPorts.Add(portUI);
-    }
-
-    public void UnhighlightDisconnectedPorts(List<Signals.Port> excludePorts = null)
-    {
-        List<GameObject> portsToKeep = new();
-        foreach (GameObject portUI in _highlightedPorts)
-        {
-            if (excludePorts != null && excludePorts.Contains(portUI.GetComponent<PortUI>().port)) portsToKeep.Add(portUI);
-            else Destroy(portUI);
-        }
-        _highlightedPorts = portsToKeep;
-    }
-
-    public void ConnectWire(Signals.Port port1, Signals.Port port2, GameObject wire)
-    {
-        signalNetworkGraph.ConnectWire(wire, port1, port2);
-    }
-
-    public void DisconnectWire(GameObject wire)
-    {
-        signalNetworkGraph.DisconnectWire(wire);
-        Destroy(wire);
     }
 }

@@ -65,7 +65,7 @@ public class Hotbar : MonoBehaviour
 
         // Instantiate the dragged item
         if (draggedItem != null) Destroy(draggedItem);
-        draggedItem = Instantiate(hotbar[index].prefab, Vector3.zero, Quaternion.identity);
+        draggedItem = Instantiate(hotbar[index].gameObject, Vector3.zero, Quaternion.identity);
         // set the dragged item and all its children layer to ignore raycast
         InitDraggedItemRecursively(draggedItem);
         draggedItem.SetActive(false);
@@ -111,7 +111,7 @@ public class Hotbar : MonoBehaviour
         {
             if (!draggedItem.activeSelf)
             {
-                GameManager.Instance.UnfocusStructure();
+                GameManager.Instance.Unfocus();
                 draggedItem.SetActive(true);
             }
 
@@ -135,8 +135,7 @@ public class Hotbar : MonoBehaviour
         if (Physics.Raycast(ray, out RaycastHit result))
         {
             Vector3 hitPoint = result.point + result.normal * 0.01f;
-            Vector2Int position = Vector2Int.RoundToInt(new Vector2(hitPoint.x, hitPoint.z));
-            GameManager.Instance.AddStructure(position, placementOrientation, hotbar[selectedItemindex].prefab);
+            hotbar[selectedItemindex].Place(hitPoint, placementOrientation, result.collider);
         }
     }
 

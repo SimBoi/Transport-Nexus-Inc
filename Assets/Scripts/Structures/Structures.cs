@@ -4,13 +4,17 @@ using Signals;
 
 namespace Structures
 {
-    public class Sensor : MonoBehaviour
+    public class Structure : MonoBehaviour
     {
         [HideInInspector] public GameObject prefab; // must be set by the instantiator
+    }
+
+    public class Sensor : Structure
+    {
         public PortNetworkGraph network { get; private set; }
         [SerializeField] public Port outputPort;
 
-        public void Initialize(PortNetworkGraph signalNetworkGraph)
+        virtual public void Initialize(PortNetworkGraph signalNetworkGraph)
         {
             network = signalNetworkGraph;
             outputPort.AddToNetwork(network);
@@ -24,9 +28,8 @@ namespace Structures
         protected virtual float ReadSensor() { return 0; }
     }
 
-    public class Processor : MonoBehaviour
+    public class Processor : Structure
     {
-        [HideInInspector] public GameObject prefab; // must be set by the instantiator
         public PortNetworkGraph network { get; private set; }
         [SerializeField] public Port[] inputPorts;
         [SerializeField] public Port outputPort;
@@ -122,14 +125,12 @@ namespace Structures
         }
     }
 
-    public class Actuator : MonoBehaviour
+    public class Actuator : Structure
     {
-        [HideInInspector] public GameObject prefab; // must be set by the instantiator
         public PortNetworkGraph network { get; private set; }
         [SerializeField] public Port[] inputPorts;
 
-        // the initializer should be called in the derived class's Start() method
-        public void Initialize(PortNetworkGraph signalNetworkGraph)
+        virtual public void Initialize(PortNetworkGraph signalNetworkGraph)
         {
             network = signalNetworkGraph;
             foreach (Port inputPort in inputPorts) inputPort.AddToNetwork(network);
@@ -143,5 +144,113 @@ namespace Structures
         }
 
         protected virtual void WriteActuator(float[] inputSignals) { }
+    }
+
+    // base class for rail structures that can be connected to each other along different orientations
+    public class DynamicRail : Structure
+    {
+        public List<Vector2Int> connections { get; private set; } = new List<Vector2Int>(2);
+        public List<Vector2Int> trainOrientations { get; private set; } = new List<Vector2Int>(2) { Vector2Int.up, Vector2Int.down };
+        public List<Train> trains { get; private set; } = new List<Train>();
+
+        public bool CanConnect(Vector2Int dir)
+        {
+            return connections.Count < 2 || connections.Contains(dir);
+        }
+
+        public void Connect(Vector2Int dir)
+        {
+            connections.Add(dir);
+            if (connections.Count == 1)
+            {
+                trainOrientations[0] = -dir;
+                trainOrientations[1] = dir;
+            }
+            else if (connections.Count == 2)
+            {
+                trainOrientations[1] = -dir;
+            }
+
+            OnOrientRail();
+        }
+
+        public void Disconnect(Vector2Int dir)
+        {
+            connections.Remove(dir);
+            if (connections.Count == 1)
+            {
+                trainOrientations[0] = -connections[0];
+                trainOrientations[1] = connections[0];
+            }
+            else if (connections.Count == 0)
+            {
+                trainOrientations[0] = Vector2Int.up;
+                trainOrientations[1] = Vector2Int.down;
+            }
+
+            OnOrientRail();
+        }
+
+        public bool TrainEnter(Train train)
+        {
+            if (trains.Contains(train)) throw new System.Exception("Train already in rail.");
+            trains.Add(train);
+            OnTrainEnter(train);
+            return true;
+        }
+
+        public void TrainExit(Train train)
+        {
+            OnTrainExit(train);
+            trains.Remove(train);
+        }
+
+        protected virtual void OnOrientRail() { }
+        protected virtual void OnTrainEnter(Train train) { }
+        protected virtual void OnTrainExit(Train train) { }
+    }
+
+    public class SensorRail : Sensor
+    {
+        public List<Train> trains { get; private set; } = new List<Train>();
+
+        public bool TrainEnter(Train train)
+        {
+            if (trains.Contains(train)) return false;
+            trains.Add(train);
+            OnTrainEnter(train);
+            return true;
+        }
+
+        public void TrainExit(Train train)
+        {
+            OnTrainExit(train);
+            trains.Remove(train);
+        }
+
+        protected virtual void OnTrainEnter(Train train) { }
+        protected virtual void OnTrainExit(Train train) { }
+    }
+
+    public class ActuatorRail : Actuator
+    {
+        public List<Train> trains { get; private set; } = new List<Train>();
+
+        public bool TrainEnter(Train train)
+        {
+            if (trains.Contains(train)) return false;
+            trains.Add(train);
+            OnTrainEnter(train);
+            return true;
+        }
+
+        public void TrainExit(Train train)
+        {
+            OnTrainExit(train);
+            trains.Remove(train);
+        }
+
+        protected virtual void OnTrainEnter(Train train) { }
+        protected virtual void OnTrainExit(Train train) { }
     }
 }
