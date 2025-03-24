@@ -193,7 +193,6 @@ namespace Structures
 
         public bool TrainEnter(Train train)
         {
-            if (trains.Contains(train)) throw new System.Exception("Train already in rail.");
             trains.Add(train);
             OnTrainEnter(train);
             return true;
