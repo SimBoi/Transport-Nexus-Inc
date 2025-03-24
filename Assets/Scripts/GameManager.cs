@@ -44,7 +44,6 @@ public class GameManager : MonoBehaviour
     void FixedUpdate()
     {
         Tick();
-        CheckTrainCollisions();
     }
 
     private void Tick()
@@ -384,33 +383,6 @@ public class GameManager : MonoBehaviour
         {
             (Vector2Int orientation, _) = _tiles[tile];
             return new List<Vector2Int>(2) { orientation, -orientation };
-        }
-    }
-
-    private void CheckTrainCollisions()
-    {
-        // go over all unique pairs of trains and check for collisions
-        for (int i = 0; i < _trains.Count; i++)
-        {
-            Train train1 = _trains[i];
-            for (int j = i + 1; j < _trains.Count; j++)
-            {
-                Train train2 = _trains[j];
-
-                if (train1.isCrashed && train2.isCrashed) continue;
-
-                // check the leading and trailing carts of each train for collisions
-                Collider lead1 = train1.carts[0].GetComponent<Collider>();
-                Collider tail1 = train1.carts[train1.carts.Count - 1].GetComponent<Collider>();
-                Collider lead2 = train2.carts[0].GetComponent<Collider>();
-                Collider tail2 = train2.carts[train2.carts.Count - 1].GetComponent<Collider>();
-
-                if (lead1.bounds.Intersects(lead2.bounds) || lead1.bounds.Intersects(tail2.bounds) || tail1.bounds.Intersects(lead2.bounds) || tail1.bounds.Intersects(tail2.bounds))
-                {
-                    train1.Crash();
-                    train2.Crash();
-                }
-            }
         }
     }
 

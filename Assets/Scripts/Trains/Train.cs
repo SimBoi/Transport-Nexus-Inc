@@ -180,6 +180,7 @@ public class Train : MonoBehaviour
         if (cartType == CartType.Locomotive) newCart = Instantiate(locomotivePrefab, transform);
         else if (cartType == CartType.Fluid) newCart = Instantiate(fluidCartPrefab, transform);
         else newCart = Instantiate(cargoCartPrefab, transform);
+        newCart.GetComponent<Cart>().train = this;
 
         if (index >= 0 && index < carts.Count)
         {
