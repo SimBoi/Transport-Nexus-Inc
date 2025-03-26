@@ -146,6 +146,18 @@ namespace Structures
         protected virtual void WriteActuator(float[] inputSignals) { }
     }
 
+    public class Splitter : Structure
+    {
+        public PortNetworkGraph network { get; private set; }
+        [SerializeField] public Port port;
+
+        public void Initialize(PortNetworkGraph signalNetworkGraph)
+        {
+            network = signalNetworkGraph;
+            port.AddToNetwork(network);
+        }
+    }
+
     // base class for rail structures that can be connected to each other along different orientations
     public class DynamicRail : Structure
     {

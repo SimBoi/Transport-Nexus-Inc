@@ -18,6 +18,7 @@ public class GameManager : MonoBehaviour
     private Dictionary<Vector2Int, Sensor> _sensors = new();
     private Dictionary<Vector2Int, Processor> _processors = new();
     private Dictionary<Vector2Int, Actuator> _actuators = new();
+    private Dictionary<Vector2Int, SplitterPort> _splitterPorts = new();
     private Dictionary<Vector2Int, Structure> _rails = new();
     private List<Train> _trains = new();
 
@@ -183,6 +184,15 @@ public class GameManager : MonoBehaviour
             _actuators.Add(tile, actuator);
             actuator.Initialize(signalNetworkGraph);
         }
+        else if (structurePrefab.GetComponent<SplitterPort>())
+        {
+            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            SplitterPort splitterPort = instantiatedStructure.GetComponent<SplitterPort>();
+            splitterPort.prefab = structurePrefab;
+            _tiles.Add(tile, (orientation, splitterPort));
+            _splitterPorts.Add(tile, splitterPort);
+            splitterPort.Initialize(signalNetworkGraph);
+        }
         else
         {
             throw new Exception("Invalid structure type");
@@ -270,6 +280,12 @@ public class GameManager : MonoBehaviour
             structure = _actuators[tile].gameObject;
             foreach (Port inputPort in _actuators[tile].inputPorts) inputPort.RemoveFromNetwork();
             _actuators.Remove(tile);
+        }
+        else if (_splitterPorts.ContainsKey(tile))
+        {
+            structure = _splitterPorts[tile].gameObject;
+            _splitterPorts[tile].port.RemoveFromNetwork();
+            _splitterPorts.Remove(tile);
         }
         else
         {
@@ -470,6 +486,11 @@ public class GameManager : MonoBehaviour
                         HighlightDisconnectedPort(port);
                     }
                 }
+                else if (structure is SplitterPort splitterPort)
+                {
+                    if (excludePorts != null && excludePorts.Contains(splitterPort.port)) continue;
+                    HighlightPort(splitterPort.port);
+                }
             }
         }
     }
@@ -477,7 +498,11 @@ public class GameManager : MonoBehaviour
     public void HighlightDisconnectedPort(Port port)
     {
         if (port.isConnected) return;
+        HighlightPort(port);
+    }
 
+    public void HighlightPort(Port port)
+    {
         Vector3 cameraDirection = Camera.main.transform.forward;
         Vector3 position = port.transform.position - cameraDirection * 0.5f;
         Quaternion rotation = Quaternion.LookRotation(-cameraDirection, Vector3.up);
