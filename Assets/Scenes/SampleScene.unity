@@ -1111,6 +1111,7 @@ MonoBehaviour:
   - {fileID: 4840488585804158559, guid: 5f23c862da8213145b971aa8c220515a, type: 3}
   - {fileID: 1313187256423907593, guid: 2ace5dc297090af42940e368b637cd18, type: 3}
   - {fileID: 1313187256423907593, guid: 9806e50356d9c934f8306572ac2ded6d, type: 3}
+  - {fileID: 14972942831900650, guid: c0bd36e8d0eb1694696f6be3b7900f71, type: 3}
   expanded: {fileID: 1464086227}
   collapsed: {fileID: 366664249}
   hotbarSlotPrefab: {fileID: 7851078394814731853, guid: f41cb01afc9f52247b69945db3a9d4c8, type: 3}
