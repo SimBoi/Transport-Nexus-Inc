@@ -77,17 +77,21 @@ public class Hotbar : MonoBehaviour
     {
         obj.layer = LayerMask.NameToLayer("Ignore Raycast");
 
-        // Destroy all components other than the transform and the mesh renderers
-        foreach (Component component in obj.GetComponents<Component>())
-        {
-            if (component is Transform || component is MeshRenderer || component is MeshFilter) continue;
-            Destroy(component);
-        }
-
+        // Start with the children
         foreach (Transform child in obj.transform)
         {
             if (child == null) continue;
             InitDraggedItemRecursively(child.gameObject);
+        }
+
+        // Get all components except Transform, MeshRenderer, and MeshFilter
+        Component[] components = obj.GetComponents<Component>();
+        // Remove components in reverse order to avoid dependency issues
+        for (int i = components.Length - 1; i >= 0; i--)
+        {
+            Component component = components[i];
+            if (component is Transform || component is MeshRenderer || component is MeshFilter) continue;
+            Destroy(component);
         }
     }
 
