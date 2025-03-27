@@ -1,25 +1,17 @@
 using System.Collections.Generic;
+using Newtonsoft.Json;
+using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public enum CartType
-{
-    Locomotive,
-    Fluid,
-    Cargo
-}
 
-public class Train : MonoBehaviour
+public class Train : MonoBehaviour, ISavable
 {
-    public int id;
     [SerializeField] private Collider clickCollider;
 
     [Header("Carts")]
     [SerializeField] private GameObject locomotivePrefab;
-    [SerializeField] private GameObject fluidCartPrefab;
-    [SerializeField] private GameObject cargoCartPrefab;
-    public List<CartType> cartTypes { get; private set; } = new List<CartType>();
-    public List<GameObject> carts { get; private set; } = new List<GameObject>();
+    public List<Cart> carts { get; private set; } = new List<Cart>();
 
     [Header("Movement")]
     public float maxSpeed = 1;
@@ -36,6 +28,53 @@ public class Train : MonoBehaviour
     private float headInterpolation; // the interpolation value between the first and last points in the path half segments list for the head of the train's position, each half segment is 1 unit long in interpolation space
     private Vector2Int headOrientation; // the orientation of the head of the train
 
+    private int _id = -1;
+    public int ID
+    {
+        get
+        {
+            if (_id == -1) _id = SaveManager.Instance.GenerateUniqueId();
+            return _id;
+        }
+        set => _id = value;
+    }
+    public bool ShouldInstantiateOnLoad() => true;
+
+    public string GetStateJson()
+    {
+        return JsonConvert.SerializeObject((
+            carts.ConvertAll(cart => cart.ID),
+            maxSpeed,
+            speed,
+            acceleration,
+            deceleration,
+            actualDeceleration,
+            isBraking,
+            isCrashed,
+            tilesPath.ConvertAll(tile => (tile.x, tile.y)),
+            pathHalfSegments.ConvertAll(point => (point.x, point.y, point.z)),
+            headInterpolation,
+            (headOrientation.x, headOrientation.y)
+        ));
+    }
+
+    public void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+    {
+        var state = JsonConvert.DeserializeObject<(List<int>, float, float, float, float, float, bool, bool, List<(int, int)>, List<(float, float, float)>, float, (int, int))>(stateJson);
+        carts = state.Item1.ConvertAll(cartId => (Cart)idLookup[cartId]);
+        maxSpeed = state.Item2;
+        speed = state.Item3;
+        acceleration = state.Item4;
+        deceleration = state.Item5;
+        actualDeceleration = state.Item6;
+        isBraking = state.Item7;
+        isCrashed = state.Item8;
+        tilesPath = state.Item9.ConvertAll(tuple => new Vector2Int(tuple.Item1, tuple.Item2));
+        pathHalfSegments = state.Item10.ConvertAll(tuple => new Vector3(tuple.Item1, tuple.Item2, tuple.Item3));
+        headInterpolation = state.Item11;
+        headOrientation = new Vector2Int(state.Item12.Item1, state.Item12.Item2);
+    }
+
     public void Initialize(Vector2Int initialTile, Vector2Int initialOrientation)
     {
         tilesPath.Add(initialTile);
@@ -45,7 +84,7 @@ public class Train : MonoBehaviour
         pathHalfSegments.Add(new Vector3(initialTile.x + halfOrientation.x, 0, initialTile.y + halfOrientation.y));
         headInterpolation = 2;
         headOrientation = initialOrientation;
-        AddCart(CartType.Locomotive);
+        AddCart(locomotivePrefab);
 
         GameManager.Instance.TrainEnterTile(this, initialTile);
     }
@@ -156,7 +195,7 @@ public class Train : MonoBehaviour
         }
     }
 
-    public bool AddCart(CartType cartType, int index = -1)
+    public bool AddCart(GameObject cartPrefab, int index = -1)
     {
         if (isCrashed) return false;
 
@@ -176,27 +215,15 @@ public class Train : MonoBehaviour
         GameManager.Instance.TrainEnterTile(this, newTile);
 
         // add the new cart
-        GameObject newCart;
-        if (cartType == CartType.Locomotive) newCart = Instantiate(locomotivePrefab, transform);
-        else if (cartType == CartType.Fluid) newCart = Instantiate(fluidCartPrefab, transform);
-        else newCart = Instantiate(cargoCartPrefab, transform);
-        newCart.GetComponent<Cart>().train = this;
-
-        if (index >= 0 && index < carts.Count)
-        {
-            cartTypes.Insert(index, cartType);
-            carts.Insert(index, newCart);
-        }
-        else
-        {
-            cartTypes.Add(cartType);
-            carts.Add(newCart);
-        }
+        Cart newCart = Instantiate(cartPrefab, transform).GetComponent<Cart>();
+        newCart.train = this;
+        if (index >= 0 && index < carts.Count) carts.Insert(index, newCart);
+        else carts.Add(newCart);
 
         // handle the collider pointer click event in the train UI
         EventTrigger.Entry pointerClickEvent = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick, callback = new EventTrigger.TriggerEvent() };
         pointerClickEvent.callback.AddListener(GetComponent<TrainUI>().OnPointerClick);
-        newCart.AddComponent<EventTrigger>().triggers = new List<EventTrigger.Entry> { pointerClickEvent };
+        newCart.gameObject.AddComponent<EventTrigger>().triggers = new List<EventTrigger.Entry> { pointerClickEvent };
 
         return true;
     }
@@ -221,5 +248,40 @@ public class Train : MonoBehaviour
     {
         for (int i = tilesPath.Count; i > 0; i--) StepOutOfTile(0);
         Destroy(gameObject);
+    }
+}
+
+public class Cart : MonoBehaviour, ISavable
+{
+    [HideInInspector] public Train train;
+
+    private int _id = -1;
+    public int ID
+    {
+        get
+        {
+            if (_id == -1) _id = SaveManager.Instance.GenerateUniqueId();
+            return _id;
+        }
+        set => _id = value;
+    }
+    public bool ShouldInstantiateOnLoad() => true;
+
+    public virtual string GetStateJson()
+    {
+        return JsonConvert.SerializeObject(train.ID);
+    }
+
+    public virtual void RestoreStateJson(string stateJson, System.Collections.Generic.Dictionary<int, ISavable> idLookup)
+    {
+        int trainId = JsonConvert.DeserializeObject<int>(stateJson);
+        train = (Train)idLookup[trainId];
+    }
+
+    private void OnTriggerEnter()
+    {
+        if (train.isCrashed) return;
+
+        train.Crash();
     }
 }

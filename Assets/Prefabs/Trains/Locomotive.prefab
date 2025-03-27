@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 1072989727673491306}
   - component: {fileID: 3998952293494776308}
   - component: {fileID: 1224932277665670210}
-  - component: {fileID: 8984513293148526859}
+  - component: {fileID: 5557959156763925565}
   - component: {fileID: -3119463821195352200}
   m_Layer: 6
   m_Name: Locomotive
@@ -127,7 +127,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &8984513293148526859
+--- !u!114 &5557959156763925565
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -136,7 +136,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 7276336876301537307}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 84e37f1b9427cf04c9d58f08187cecf2, type: 3}
+  m_Script: {fileID: 11500000, guid: e317dce688f32744da2610ff806def36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   train: {fileID: 0}

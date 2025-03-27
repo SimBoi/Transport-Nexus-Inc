@@ -9,8 +9,7 @@ namespace Inventories
     {
         Structure,
         Locomotive,
-        CargoCart,
-        FluidCart
+        Cart
     }
 
     [Serializable]
@@ -35,15 +34,10 @@ namespace Inventories
                 Vector2Int tile = Vector2Int.RoundToInt(new Vector2(position.x, position.z));
                 if (!GameManager.Instance.BuildTrain(tile)) return false;
             }
-            else if (type == ItemType.CargoCart)
+            else if (type == ItemType.Cart)
             {
                 Train train = collider.GetComponentInParent<Train>();
-                if (train == null || !train.AddCart(CartType.Cargo)) return false;
-            }
-            else if (type == ItemType.FluidCart)
-            {
-                Train train = collider.GetComponentInParent<Train>();
-                if (train == null || !train.AddCart(CartType.Fluid)) return false;
+                if (train == null || !train.AddCart(gameObject)) return false;
             }
 
             GameManager.Instance.SpendMaterials(materialCosts);

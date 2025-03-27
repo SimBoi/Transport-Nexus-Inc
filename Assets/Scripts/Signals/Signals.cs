@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using QuikGraph;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace Signals
 {
@@ -9,7 +10,52 @@ namespace Signals
     {
         private UndirectedGraph<Port, TaggedUndirectedEdge<Port, GameObject>> _graph = new();
         private Dictionary<GameObject, TaggedUndirectedEdge<Port, GameObject>> _wires = new();
-        private List<Channel> _signalChannels = new();
+        private HashSet<Channel> _signalChannels = new();
+
+        public void SaveState(SaveData saveData, List<ISavable> saveables)
+        {
+            foreach (TaggedUndirectedEdge<Port, GameObject> edge in _graph.Edges)
+            {
+                Port port1 = edge.Source;
+                Port port2 = edge.Target;
+                saveData.portConnections.Add((port1.ID, port2.ID));
+            }
+
+            foreach (Channel signalChannel in _signalChannels)
+            {
+                saveData.channelIds.Add(signalChannel.ID);
+                saveables.Add(signalChannel);
+            }
+        }
+
+        public void RestoreVertices(SaveData saveData, Dictionary<int, ISavable> idLookup)
+        {
+            foreach (SavebleEntry entry in saveData.savables)
+            {
+                if (entry.type != typeof(Port).ToString()) continue;
+                Port port = (Port)idLookup[entry.id];
+                _graph.AddVertex(port);
+            }
+        }
+
+        public void RestoreChannels(SaveData saveData, Dictionary<int, ISavable> idLookup)
+        {
+            foreach (SavebleEntry entry in saveData.savables)
+            {
+                if (entry.type != typeof(Channel).ToString()) continue;
+                _signalChannels.Add((Channel)idLookup[entry.id]);
+            }
+        }
+
+        public void RestoreEdge(GameObject wire, Port port1, Port port2)
+        {
+            TaggedUndirectedEdge<Port, GameObject> edge;
+            if (port1.CompareTo(port2) > 0) edge = new(port2, port1, wire);
+            else edge = new(port1, port2, wire);
+
+            _graph.AddEdge(edge);
+            _wires.Add(wire, edge);
+        }
 
         public void AddPort(Port port)
         {
@@ -112,9 +158,32 @@ namespace Signals
         }
     }
 
-    public class Channel
+    public class Channel : ISavable
     {
         private float _signal = 0;
+
+        private int _id = -1;
+        public int ID
+        {
+            get
+            {
+                if (_id == -1) _id = SaveManager.Instance.GenerateUniqueId();
+                return _id;
+            }
+            set => _id = value;
+        }
+        public bool ShouldInstantiateOnLoad() => false;
+
+        public string GetStateJson()
+        {
+            return JsonConvert.SerializeObject(_signal);
+        }
+
+        public void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            float signal = JsonConvert.DeserializeObject<float>(stateJson);
+            _signal = signal;
+        }
 
         public void Reset()
         {

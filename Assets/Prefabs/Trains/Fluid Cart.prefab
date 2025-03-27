@@ -104,7 +104,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: Fluid Cart
   icon: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
-  type: 3
+  type: 2
   materialCosts: 030000000200000006000000
 --- !u!65 &2083318168153979899
 BoxCollider:
@@ -136,7 +136,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1218742732809665933}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 84e37f1b9427cf04c9d58f08187cecf2, type: 3}
+  m_Script: {fileID: 11500000, guid: 29bb6d5a6cfdea642b66d5ebe7abbc73, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   train: {fileID: 0}

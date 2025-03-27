@@ -12,14 +12,15 @@ public class GameManager : MonoBehaviour
 
     [HideInInspector] public int[] materials = new int[Enum.GetValues(typeof(Materials)).Length];
 
-    private Dictionary<Vector2Int, (Vector2Int orientation, Structure structure)> _tiles = new();
-
     public PortNetworkGraph signalNetworkGraph { get; private set; } = new();
+
+    private Dictionary<Vector2Int, (Vector2Int orientation, Structure structure)> _tiles = new();
     private Dictionary<Vector2Int, Sensor> _sensors = new();
     private Dictionary<Vector2Int, Processor> _processors = new();
     private Dictionary<Vector2Int, Actuator> _actuators = new();
     private Dictionary<Vector2Int, SplitterPort> _splitterPorts = new();
     private Dictionary<Vector2Int, Structure> _rails = new();
+
     private List<Train> _trains = new();
 
     private bool _isFocused = false;
@@ -33,6 +34,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject railExtenderPrefab;
     private List<GameObject> _railExtenders = new();
 
+    [SerializeField] private GameObject wirePrefab;
     [SerializeField] private Transform powerLevels;
     [SerializeField] private GameObject powerLevelUIPrefab;
 
@@ -63,6 +65,64 @@ public class GameManager : MonoBehaviour
 
         // Step 5: Write all actuators
         foreach (Actuator actuator in _actuators.Values) actuator.Write();
+    }
+
+    public void SaveState(SaveData saveData, List<ISavable> saveables)
+    {
+        // save materials
+        saveData.materials = materials;
+
+        // save tiles
+        foreach (KeyValuePair<Vector2Int, (Vector2Int orientation, Structure structure)> entry in _tiles)
+        {
+            Vector2Int tile = entry.Key;
+            (Vector2Int orientation, Structure structure) = entry.Value;
+            saveData.tiles.Add((tile, orientation, structure.ID));
+        }
+
+        // save signal network graph
+        signalNetworkGraph.SaveState(saveData, saveables);
+
+        // save trains
+        foreach (Train train in _trains) saveData.trainIds.Add(train.ID);
+    }
+
+    public void RestoreState(SaveData saveData, Dictionary<int, ISavable> idLookup)
+    {
+        // restore materials
+        materials = saveData.materials;
+
+        // restore tiles
+        foreach ((Vector2Int tile, Vector2Int orientation, int structureId) in saveData.tiles)
+        {
+            Structure structure = idLookup[structureId] as Structure;
+            _tiles.Add(tile, (orientation, structure));
+            if (structure is Sensor sensor) _sensors.Add(tile, sensor);
+            else if (structure is Processor processor) _processors.Add(tile, processor);
+            else if (structure is Actuator actuator) _actuators.Add(tile, actuator);
+            else if (structure is SplitterPort splitterPort) _splitterPorts.Add(tile, splitterPort);
+            if (structure is DynamicRail || structure is SensorRail || structure is ActuatorRail) _rails.Add(tile, structure);
+        }
+
+        // restore signal network graph and wires
+        signalNetworkGraph.RestoreVertices(saveData, idLookup);
+        signalNetworkGraph.RestoreChannels(saveData, idLookup);
+        foreach ((int port1Id, int port2Id) in saveData.portConnections)
+        {
+            Port port1 = idLookup[port1Id] as Port;
+            Port port2 = idLookup[port2Id] as Port;
+            GameObject wire = Instantiate(wirePrefab, port1.transform.position, Quaternion.identity);
+            wire.GetComponent<AutoWireResizer>().SetEnd(port2.transform.position);
+            signalNetworkGraph.RestoreEdge(wire, port1, port2);
+            ShowPowerLevelUI(port1, port2);
+        }
+
+        // restore trains
+        foreach (int trainId in saveData.trainIds)
+        {
+            Train train = idLookup[trainId] as Train;
+            _trains.Add(train);
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -303,7 +363,11 @@ public class GameManager : MonoBehaviour
     public void ConnectWire(Port port1, Port port2, GameObject wire)
     {
         signalNetworkGraph.ConnectWire(wire, port1, port2);
+        ShowPowerLevelUI(port1, port2);
+    }
 
+    public void ShowPowerLevelUI(Port port1, Port port2)
+    {
         GameObject powerLevelUI = Instantiate(powerLevelUIPrefab, powerLevels);
         powerLevelUI.GetComponent<PowerLevelUI>().Initialize(port1, port2);
     }

@@ -1,12 +1,27 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Signals;
+using Newtonsoft.Json;
 
 namespace Structures
 {
-    public class Structure : MonoBehaviour
+    public class Structure : MonoBehaviour, ISavable
     {
         [HideInInspector] public GameObject prefab; // must be set by the instantiator
+
+        private int _id = -1;
+        public int ID
+        {
+            get
+            {
+                if (_id == -1) _id = SaveManager.Instance.GenerateUniqueId();
+                return _id;
+            }
+            set => _id = value;
+        }
+        public bool ShouldInstantiateOnLoad() => true;
+        public virtual string GetStateJson() { return ""; }
+        public virtual void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup) { }
     }
 
     public class Sensor : Structure
@@ -14,7 +29,13 @@ namespace Structures
         public PortNetworkGraph network { get; private set; }
         [SerializeField] public Port outputPort;
 
-        virtual public void Initialize(PortNetworkGraph signalNetworkGraph)
+        public override void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            base.RestoreStateJson(stateJson, idLookup);
+            network = GameManager.Instance.signalNetworkGraph;
+        }
+
+        public virtual void Initialize(PortNetworkGraph signalNetworkGraph)
         {
             network = signalNetworkGraph;
             outputPort.AddToNetwork(network);
@@ -38,8 +59,41 @@ namespace Structures
         public Processor _chainedInputProcessor { get; private set; }
         public Processor _chainedOutputProcessor { get; private set; }
 
+        public override string GetStateJson()
+        {
+            CombinedState combinedState = new()
+            {
+                baseState = base.GetStateJson(),
+                inheritedState = JsonConvert.SerializeObject((
+                    _outputQueue.ToArray(),
+                    _processedSignal,
+                    _chainedInputProcessor?.ID ?? -1,
+                    _chainedOutputProcessor?.ID ?? -1
+                ))
+            };
+            return JsonConvert.SerializeObject(combinedState);
+        }
+
+        public override void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            var combinedState = JsonConvert.DeserializeObject<CombinedState>(stateJson);
+            base.RestoreStateJson(combinedState.baseState, idLookup);
+            var state = JsonConvert.DeserializeObject<(
+                float[],
+                float,
+                int,
+                int
+            )>(combinedState.inheritedState);
+
+            _outputQueue = new Queue<float>(state.Item1);
+            _processedSignal = state.Item2;
+            _chainedInputProcessor = state.Item3 == -1 ? null : (Processor)idLookup[state.Item3];
+            _chainedOutputProcessor = state.Item4 == -1 ? null : (Processor)idLookup[state.Item4];
+        }
+
         public void Initialize(PortNetworkGraph signalNetworkGraph, int delayTicks = 1)
         {
+            Debug.Log("Processor Initialize");
             network = signalNetworkGraph;
             foreach (Port inputPort in inputPorts) inputPort.AddToNetwork(network);
             outputPort.AddToNetwork(network);
@@ -130,6 +184,12 @@ namespace Structures
         public PortNetworkGraph network { get; private set; }
         [SerializeField] public Port[] inputPorts;
 
+        public override void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            base.RestoreStateJson(stateJson, idLookup);
+            network = GameManager.Instance.signalNetworkGraph;
+        }
+
         virtual public void Initialize(PortNetworkGraph signalNetworkGraph)
         {
             network = signalNetworkGraph;
@@ -151,6 +211,12 @@ namespace Structures
         public PortNetworkGraph network { get; private set; }
         [SerializeField] public Port port;
 
+        public override void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            base.RestoreStateJson(stateJson, idLookup);
+            network = GameManager.Instance.signalNetworkGraph;
+        }
+
         public void Initialize(PortNetworkGraph signalNetworkGraph)
         {
             network = signalNetworkGraph;
@@ -164,6 +230,38 @@ namespace Structures
         public List<Vector2Int> connections { get; private set; } = new List<Vector2Int>(2);
         public List<Vector2Int> trainOrientations { get; private set; } = new List<Vector2Int>(2) { Vector2Int.up, Vector2Int.down };
         public List<Train> trains { get; private set; } = new List<Train>();
+
+        public override string GetStateJson()
+        {
+            CombinedState combinedState = new()
+            {
+                baseState = base.GetStateJson(),
+                inheritedState = JsonConvert.SerializeObject((
+                    connections.ToArray(),
+                    trainOrientations.ToArray(),
+                    trains.ConvertAll(t => t.ID).ToArray()
+                ))
+            };
+            return JsonConvert.SerializeObject(combinedState);
+        }
+
+        public override void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            var combinedState = JsonConvert.DeserializeObject<CombinedState>(stateJson);
+            base.RestoreStateJson(combinedState.baseState, idLookup);
+            var state = JsonConvert.DeserializeObject<(
+                Vector2Int[],
+                Vector2Int[],
+                int[]
+            )>(combinedState.inheritedState);
+
+            connections = new List<Vector2Int>(state.Item1);
+            trainOrientations = new List<Vector2Int>(state.Item2);
+            trains = new List<Train>(state.Item3.Length);
+            foreach (int trainId in state.Item3) trains.Add((Train)idLookup[trainId]);
+
+            OnOrientRail();
+        }
 
         public bool CanConnect(Vector2Int dir)
         {
@@ -225,6 +323,26 @@ namespace Structures
     {
         public List<Train> trains { get; private set; } = new List<Train>();
 
+        public override string GetStateJson()
+        {
+            CombinedState combinedState = new()
+            {
+                baseState = base.GetStateJson(),
+                inheritedState = JsonConvert.SerializeObject(trains.ConvertAll(t => t.ID).ToArray())
+            };
+            return JsonConvert.SerializeObject(combinedState);
+        }
+
+        public override void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            var combinedState = JsonConvert.DeserializeObject<CombinedState>(stateJson);
+            base.RestoreStateJson(combinedState.baseState, idLookup);
+            var state = JsonConvert.DeserializeObject<int[]>(combinedState.inheritedState);
+
+            trains = new List<Train>(state.Length);
+            foreach (int trainId in state) trains.Add((Train)idLookup[trainId]);
+        }
+
         public bool TrainEnter(Train train)
         {
             if (trains.Contains(train)) return false;
@@ -246,6 +364,26 @@ namespace Structures
     public class ActuatorRail : Actuator
     {
         public List<Train> trains { get; private set; } = new List<Train>();
+
+        public override string GetStateJson()
+        {
+            CombinedState combinedState = new()
+            {
+                baseState = base.GetStateJson(),
+                inheritedState = JsonConvert.SerializeObject(trains.ConvertAll(t => t.ID).ToArray())
+            };
+            return JsonConvert.SerializeObject(combinedState);
+        }
+
+        public override void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            var combinedState = JsonConvert.DeserializeObject<CombinedState>(stateJson);
+            base.RestoreStateJson(combinedState.baseState, idLookup);
+            var state = JsonConvert.DeserializeObject<int[]>(combinedState.inheritedState);
+
+            trains = new List<Train>(state.Length);
+            foreach (int trainId in state) trains.Add((Train)idLookup[trainId]);
+        }
 
         public bool TrainEnter(Train train)
         {
