@@ -276,6 +276,10 @@ public class Cart : MonoBehaviour, ISavable
     {
         int trainId = JsonConvert.DeserializeObject<int>(stateJson);
         train = (Train)idLookup[trainId];
+        transform.SetParent(train.transform);
+        EventTrigger.Entry pointerClickEvent = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick, callback = new EventTrigger.TriggerEvent() };
+        pointerClickEvent.callback.AddListener(train.GetComponent<TrainUI>().OnPointerClick);
+        gameObject.AddComponent<EventTrigger>().triggers = new List<EventTrigger.Entry> { pointerClickEvent };
     }
 
     private void OnTriggerEnter()
