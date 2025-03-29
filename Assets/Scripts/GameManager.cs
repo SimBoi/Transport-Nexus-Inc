@@ -67,7 +67,7 @@ public class GameManager : MonoBehaviour
         foreach (Actuator actuator in _actuators.Values) actuator.Write();
     }
 
-    public void SaveState(SaveData saveData, List<ISavable> saveables)
+    public void SaveState(SaveData saveData)
     {
         // save materials
         saveData.materials = materials;
@@ -81,7 +81,7 @@ public class GameManager : MonoBehaviour
         }
 
         // save signal network graph
-        signalNetworkGraph.SaveState(saveData, saveables);
+        signalNetworkGraph.SaveState(saveData);
 
         // save trains
         foreach (Train train in _trains) saveData.trainIds.Add(train.ID);

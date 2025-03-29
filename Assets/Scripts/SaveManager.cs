@@ -89,11 +89,17 @@ public class SaveManager : MonoBehaviour
     public void SaveGame()
     {
         SaveData saveData = new SaveData();
-        // Find all objects that implement ISavable in the scene and save their state
+        // Find all MonoBehaviour ISavable objects in the scene and save their state
         List<ISavable> saveables = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None).OfType<ISavable>().ToList();
 
+        // Find all non MonoBehaviour ISavable objects in the scene and save their state
+        // Sigal Channels
+        HashSet<Signals.Channel> signalChannels = new();
+        foreach (ISavable savable in saveables) if (savable is Signals.Port port && port.signalChannel != null) signalChannels.Add(port.signalChannel);
+        foreach (Signals.Channel signalChannel in signalChannels) saveables.Add(signalChannel);
+
         // Save GameManager state
-        GameManager.Instance.SaveState(saveData, saveables);
+        GameManager.Instance.SaveState(saveData);
 
         // Save ISavable objects state
         foreach (ISavable savable in saveables)

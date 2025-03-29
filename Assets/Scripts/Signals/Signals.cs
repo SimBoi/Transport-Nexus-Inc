@@ -12,7 +12,7 @@ namespace Signals
         private Dictionary<GameObject, TaggedUndirectedEdge<Port, GameObject>> _wires = new();
         private HashSet<Channel> _signalChannels = new();
 
-        public void SaveState(SaveData saveData, List<ISavable> saveables)
+        public void SaveState(SaveData saveData)
         {
             foreach (TaggedUndirectedEdge<Port, GameObject> edge in _graph.Edges)
             {
@@ -21,11 +21,7 @@ namespace Signals
                 saveData.portConnections.Add((port1.ID, port2.ID));
             }
 
-            foreach (Channel signalChannel in _signalChannels)
-            {
-                saveData.channelIds.Add(signalChannel.ID);
-                saveables.Add(signalChannel);
-            }
+            foreach (Channel signalChannel in _signalChannels) saveData.channelIds.Add(signalChannel.ID);
         }
 
         public void RestoreVertices(SaveData saveData, Dictionary<int, ISavable> idLookup)
@@ -40,10 +36,10 @@ namespace Signals
 
         public void RestoreChannels(SaveData saveData, Dictionary<int, ISavable> idLookup)
         {
-            foreach (SavebleEntry entry in saveData.savables)
+            foreach (int channelId in saveData.channelIds)
             {
-                if (entry.type != typeof(Channel).ToString()) continue;
-                _signalChannels.Add((Channel)idLookup[entry.id]);
+                Channel channel = (Channel)idLookup[channelId];
+                _signalChannels.Add(channel);
             }
         }
 
