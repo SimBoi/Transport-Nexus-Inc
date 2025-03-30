@@ -343,6 +343,17 @@ namespace Structures
             foreach (int trainId in state) trains.Add((Train)idLookup[trainId]);
         }
 
+        public virtual List<Vector2Int> GetCurrentTrainOrientations(Vector2Int tile)
+        {
+            Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
+            return new List<Vector2Int>(2) { orientation, -orientation };
+        }
+
+        public virtual List<Vector2Int> GetAllTrainOrientations(Vector2Int tile)
+        {
+            return GetCurrentTrainOrientations(tile);
+        }
+
         public bool TrainEnter(Train train)
         {
             if (trains.Contains(train)) return false;
@@ -383,6 +394,17 @@ namespace Structures
 
             trains = new List<Train>(state.Length);
             foreach (int trainId in state) trains.Add((Train)idLookup[trainId]);
+        }
+
+        public virtual List<Vector2Int> GetCurrentTrainOrientations(Vector2Int tile)
+        {
+            Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
+            return new List<Vector2Int>(2) { orientation, -orientation };
+        }
+
+        public virtual List<Vector2Int> GetAllTrainOrientations(Vector2Int tile)
+        {
+            return GetCurrentTrainOrientations(tile);
         }
 
         public bool TrainEnter(Train train)

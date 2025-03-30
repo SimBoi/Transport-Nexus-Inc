@@ -116,7 +116,7 @@ public class Train : MonoBehaviour, ISavable
     private void AdvancePath(Vector2Int newTile)
     {
         // get the allowed train orientations for the new tile
-        List<Vector2Int> newOrientations = GameManager.Instance.GetTrainOrientations(newTile);
+        List<Vector2Int> newOrientations = GameManager.Instance.GetCurrentTrainOrientations(newTile);
 
         // if the new tile is compatible with the current head orientation, set the new head orientation and add the new tile and half segments
         if (newOrientations.Contains(headOrientation))
@@ -202,7 +202,7 @@ public class Train : MonoBehaviour, ISavable
         Vector3 firstHalfSegmentDirection = (pathHalfSegments[1] - pathHalfSegments[0]).normalized;
         Vector2Int tailOrientation = new Vector2Int(Mathf.RoundToInt(firstHalfSegmentDirection.x), Mathf.RoundToInt(firstHalfSegmentDirection.z));
         Vector2Int newTile = tilesPath[0] - tailOrientation;
-        List<Vector2Int> newOrientations = GameManager.Instance.GetTrainOrientations(newTile);
+        List<Vector2Int> newOrientations = GameManager.Instance.GetCurrentTrainOrientations(newTile);
         if (!GameManager.Instance.CanBuildTrain(newTile)) return false;
 
         // add a new tile at the tail of the train

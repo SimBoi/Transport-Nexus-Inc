@@ -515,8 +515,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hotbar:
-  - {fileID: 1910906434794956382, guid: d0e3e02d3c096d644ab561795c105d85, type: 3}
   - {fileID: 7145204121215855852, guid: ab57ecd7031572e47b57c21ea0f28252, type: 3}
+  - {fileID: 1910906434794956382, guid: d0e3e02d3c096d644ab561795c105d85, type: 3}
+  - {fileID: 6009069757217017520, guid: a573b29986fef6b4aae5909b5633deea, type: 3}
   - {fileID: 3998952293494776308, guid: c902430ca1f737c478479f54c21213ce, type: 3}
   - {fileID: 7640723278584451976, guid: 36cd15cea80c5494e964618d4d77622f, type: 3}
   - {fileID: 7200182165930821767, guid: 02683772e5abb1a48aab11a8ed560c71, type: 3}
@@ -1452,6 +1453,7 @@ MonoBehaviour:
   - {fileID: 4814123851518428240, guid: 9806e50356d9c934f8306572ac2ded6d, type: 3}
   - {fileID: 33510936106245419, guid: fac95d5a8cdebe744932412ccb799374, type: 3}
   - {fileID: 4814123851518428240, guid: 9b9a7be61e038774db7160f0f0fc629b, type: 3}
+  - {fileID: 6233146714362168054, guid: a573b29986fef6b4aae5909b5633deea, type: 3}
 --- !u!1 &1861416278
 GameObject:
   m_ObjectHideFlags: 0
