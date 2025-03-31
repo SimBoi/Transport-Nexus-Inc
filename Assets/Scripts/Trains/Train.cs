@@ -116,12 +116,13 @@ public class Train : MonoBehaviour, ISavable
     private void AdvancePath(Vector2Int newTile)
     {
         // get the allowed train orientations for the new tile
-        List<Vector2Int> newOrientations = GameManager.Instance.GetCurrentTrainOrientations(newTile);
+        List<Vector2Int> newOrientations = GameManager.Instance.GetTrainOrientations(newTile);
 
         // if the new tile is compatible with the current head orientation, set the new head orientation and add the new tile and half segments
         if (newOrientations.Contains(headOrientation))
         {
-            headOrientation = newOrientations[0] == headOrientation ? -newOrientations[1] : -newOrientations[0];
+            // get the new head orientation
+            headOrientation = GameManager.Instance.GetNextTrainOrientation(newTile, headOrientation);
             Vector2 halfOrientation = new Vector2(headOrientation.x, headOrientation.y) * 0.5f;
             Vector3 newPathEnd = new Vector3(newTile.x + halfOrientation.x, 0, newTile.y + halfOrientation.y);
 
@@ -202,11 +203,10 @@ public class Train : MonoBehaviour, ISavable
         Vector3 firstHalfSegmentDirection = (pathHalfSegments[1] - pathHalfSegments[0]).normalized;
         Vector2Int tailOrientation = new Vector2Int(Mathf.RoundToInt(firstHalfSegmentDirection.x), Mathf.RoundToInt(firstHalfSegmentDirection.z));
         Vector2Int newTile = tilesPath[0] - tailOrientation;
-        List<Vector2Int> newOrientations = GameManager.Instance.GetCurrentTrainOrientations(newTile);
         if (!GameManager.Instance.CanBuildTrain(newTile)) return false;
 
         // add a new tile at the tail of the train
-        tailOrientation = tailOrientation == -newOrientations[0] ? newOrientations[1] : newOrientations[0];
+        tailOrientation = GameManager.Instance.GetNextTrainOrientation(newTile, tailOrientation);
         Vector2 halfOrientation = new Vector2(tailOrientation.x, tailOrientation.y) * 0.5f;
         tilesPath.Insert(0, newTile);
         pathHalfSegments.Insert(0, new Vector3(newTile.x - halfOrientation.x, 0, newTile.y - halfOrientation.y));

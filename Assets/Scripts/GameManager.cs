@@ -416,7 +416,7 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                List<Vector2Int> orientations = GetAllTrainOrientations(neighborTile);
+                List<Vector2Int> orientations = GetTrainOrientations(neighborTile);
                 foreach (Vector2Int orientation in orientations) if (orientation == neighborDir) compatibleConnections.Add(neighborDir);
             }
 
@@ -460,23 +460,27 @@ public class GameManager : MonoBehaviour
         return _tiles[tile].orientation;
     }
 
-    public List<Vector2Int> GetCurrentTrainOrientations(Vector2Int tile)
+    public Vector2Int GetNextTrainOrientation(Vector2Int tile, Vector2Int orientation)
     {
-        if (!_rails.ContainsKey(tile)) return new List<Vector2Int>();
+        if (!_rails.ContainsKey(tile)) return Vector2Int.zero;
 
-        if (_rails[tile] is DynamicRail dynamicRail) return dynamicRail.trainOrientations;
-        else if (_rails[tile] is SensorRail sensorRail) return sensorRail.GetCurrentTrainOrientations(tile);
-        else if (_rails[tile] is ActuatorRail actuatorRail) return actuatorRail.GetCurrentTrainOrientations(tile);
-        else return new List<Vector2Int>();
+        if (_rails[tile] is DynamicRail dynamicRail)
+        {
+            foreach (Vector2Int o in dynamicRail.trainOrientations) if (o != orientation) return -o;
+            return Vector2Int.zero;
+        }
+        else if (_rails[tile] is SensorRail sensorRail) return sensorRail.GetNextTrainOrientation(tile, orientation);
+        else if (_rails[tile] is ActuatorRail actuatorRail) return actuatorRail.GetNextTrainOrientation(tile, orientation);
+        return Vector2Int.zero;
     }
 
-    public List<Vector2Int> GetAllTrainOrientations(Vector2Int tile)
+    public List<Vector2Int> GetTrainOrientations(Vector2Int tile)
     {
         if (!_rails.ContainsKey(tile)) return new List<Vector2Int>();
 
         if (_rails[tile] is DynamicRail dynamicRail) return dynamicRail.trainOrientations;
-        else if (_rails[tile] is SensorRail sensorRail) return sensorRail.GetAllTrainOrientations(tile);
-        else if (_rails[tile] is ActuatorRail actuatorRail) return actuatorRail.GetAllTrainOrientations(tile);
+        else if (_rails[tile] is SensorRail sensorRail) return sensorRail.GetTrainOrientations(tile);
+        else if (_rails[tile] is ActuatorRail actuatorRail) return actuatorRail.GetTrainOrientations(tile);
         else return new List<Vector2Int>();
     }
 
@@ -523,7 +527,7 @@ public class GameManager : MonoBehaviour
                 }
                 else
                 {
-                    List<Vector2Int> orientations = GetAllTrainOrientations(tile);
+                    List<Vector2Int> orientations = GetTrainOrientations(tile);
                     foreach (Vector2Int orientation in orientations) if (!_tiles.ContainsKey(tile - orientation)) ShowRailExtender(tile, -orientation);
                 }
             }

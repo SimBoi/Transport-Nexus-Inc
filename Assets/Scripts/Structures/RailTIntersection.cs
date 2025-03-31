@@ -28,16 +28,19 @@ public class RailTIntersection : ActuatorRail
         OrientRail();
     }
 
-    public override List<Vector2Int> GetCurrentTrainOrientations(Vector2Int tile)
+    public override Vector2Int GetNextTrainOrientation(Vector2Int tile, Vector2Int orientation)
     {
-        Vector2Int tileOrientation = GameManager.Instance.GetTileOrientation(tile);
-        if (isRightTurn) return new List<Vector2Int> { tileOrientation, new Vector2Int(-tileOrientation.y, tileOrientation.x) };
-        else return new List<Vector2Int> { tileOrientation, new Vector2Int(tileOrientation.y, -tileOrientation.x) };
+        List<Vector2Int> orientations = GetTrainOrientations(tile);
+        if (orientation == orientations[0]) return isRightTurn ? orientations[2] : orientations[1];
+        else if (orientation == orientations[1]) return isRightTurn ? -orientations[0] : orientation;
+        else if (orientation == orientations[2]) return isRightTurn ? orientation : -orientations[0];
+        return Vector2Int.zero;
     }
 
-    public override List<Vector2Int> GetAllTrainOrientations(Vector2Int tile)
+    public override List<Vector2Int> GetTrainOrientations(Vector2Int tile)
     {
         Vector2Int tileOrientation = GameManager.Instance.GetTileOrientation(tile);
+        // { forward, left, right }
         return new List<Vector2Int> { tileOrientation, new Vector2Int(-tileOrientation.y, tileOrientation.x), new Vector2Int(tileOrientation.y, -tileOrientation.x) };
     }
 

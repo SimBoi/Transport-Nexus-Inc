@@ -343,15 +343,17 @@ namespace Structures
             foreach (int trainId in state) trains.Add((Train)idLookup[trainId]);
         }
 
-        public virtual List<Vector2Int> GetCurrentTrainOrientations(Vector2Int tile)
+        public virtual Vector2Int GetNextTrainOrientation(Vector2Int tile, Vector2Int orientation)
+        {
+            List<Vector2Int> orientations = GetTrainOrientations(tile);
+            foreach (Vector2Int o in orientations) if (o != orientation) return -o;
+            return Vector2Int.zero;
+        }
+
+        public virtual List<Vector2Int> GetTrainOrientations(Vector2Int tile)
         {
             Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
             return new List<Vector2Int>(2) { orientation, -orientation };
-        }
-
-        public virtual List<Vector2Int> GetAllTrainOrientations(Vector2Int tile)
-        {
-            return GetCurrentTrainOrientations(tile);
         }
 
         public bool TrainEnter(Train train)
@@ -396,15 +398,17 @@ namespace Structures
             foreach (int trainId in state) trains.Add((Train)idLookup[trainId]);
         }
 
-        public virtual List<Vector2Int> GetCurrentTrainOrientations(Vector2Int tile)
+        public virtual Vector2Int GetNextTrainOrientation(Vector2Int tile, Vector2Int orientation)
+        {
+            List<Vector2Int> orientations = GetTrainOrientations(tile);
+            foreach (Vector2Int o in orientations) if (o != orientation) return -o;
+            return Vector2Int.zero;
+        }
+
+        public virtual List<Vector2Int> GetTrainOrientations(Vector2Int tile)
         {
             Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
             return new List<Vector2Int>(2) { orientation, -orientation };
-        }
-
-        public virtual List<Vector2Int> GetAllTrainOrientations(Vector2Int tile)
-        {
-            return GetCurrentTrainOrientations(tile);
         }
 
         public bool TrainEnter(Train train)
