@@ -8,3 +8,4 @@ Feature roadmap:
 5. Items and Conveyor belts - WIP
 6. Machines and funnels
 7. Code documentation
+8. Cargo carts
