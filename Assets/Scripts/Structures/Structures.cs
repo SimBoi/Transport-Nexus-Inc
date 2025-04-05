@@ -9,7 +9,9 @@ namespace Structures
 {
     public class Structure : MonoBehaviour, ISavable
     {
-        public Vector2Int tile = Vector2Int.zero; // the tile the structure is on
+        public int size = 1; // structure extends in +x and +y direction
+        [HideInInspector] public Vector2Int tile = Vector2Int.zero; // the tile the structure is on, if size > 1, this is the bottom left tile relative to the orientation
+        [HideInInspector] public Vector2Int orientation = Vector2Int.up; // the direction of the structure
         [HideInInspector] public GameObject prefab; // must be set by the instantiator
 
         private int _id = -1;
@@ -27,14 +29,26 @@ namespace Structures
         public virtual string GetStateJson()
         {
             return JsonConvert.SerializeObject((
-                (tile.x, tile.y)
+                size,
+                (tile.x, tile.y),
+                (orientation.x, orientation.y)
             ));
         }
 
         public virtual void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
         {
-            var state = JsonConvert.DeserializeObject<(int, int)>(stateJson);
-            tile = new Vector2Int(state.Item1, state.Item2);
+            var state = JsonConvert.DeserializeObject<(int, (int, int), (int, int))>(stateJson);
+            size = state.Item1;
+            tile = new Vector2Int(state.Item2.Item1, state.Item2.Item2);
+            orientation = new Vector2Int(state.Item3.Item1, state.Item3.Item2);
+        }
+
+        public static (Vector2Int newTile, Vector2Int newOrientation) RotateClockwise(Vector2Int tile, Vector2Int orientation, int size)
+        {
+            // newTile should be the bottom left tile of the structure relative to the new orientation
+            Vector2Int newTile = tile + (size - 1) * orientation;
+            Vector2Int newOrientation = new Vector2Int(orientation.y, -orientation.x);
+            return (newTile, newOrientation);
         }
     }
 
@@ -107,7 +121,6 @@ namespace Structures
 
         public void Initialize(PortNetworkGraph signalNetworkGraph, int delayTicks = 1)
         {
-            Debug.Log("Processor Initialize");
             network = signalNetworkGraph;
             foreach (Port inputPort in inputPorts) inputPort.AddToNetwork(network);
             outputPort.AddToNetwork(network);
@@ -399,7 +412,6 @@ namespace Structures
 
         public virtual List<Vector2Int> GetTrainOrientations()
         {
-            Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
             return new List<Vector2Int>(2) { orientation, -orientation };
         }
 
@@ -454,7 +466,6 @@ namespace Structures
 
         public virtual List<Vector2Int> GetTrainOrientations()
         {
-            Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
             return new List<Vector2Int>(2) { orientation, -orientation };
         }
 
@@ -526,7 +537,6 @@ namespace Structures
             if (connections.Contains(dir)) return true;
             if (connections.Count == 0) return true;
 
-            Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
             if (connections.Count == 1)
             {
                 if (connections[0] == exitOrientation && dir == -orientation) return true;
@@ -540,7 +550,6 @@ namespace Structures
         public override void OnConnect(Vector2Int dir)
         {
             // update exit orientation
-            Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
             if (orientation != -dir) exitOrientation = dir;
             else if (connections.Count == 1) exitOrientation = orientation;
 
@@ -609,12 +618,12 @@ namespace Structures
 
         public virtual Vector2Int GetNextExitOrientation(ConveyedResource resource)
         {
-            return GameManager.Instance.GetTileOrientation(tile);
+            return orientation;
         }
 
         public virtual List<Vector2Int> GetExitOrientations()
         {
-            return new List<Vector2Int>(1) { GameManager.Instance.GetTileOrientation(tile) };
+            return new List<Vector2Int>(1) { orientation };
         }
 
         public void ResourceEnter(ConveyedResource resource)
@@ -679,12 +688,12 @@ namespace Structures
 
         public virtual Vector2Int GetNextExitOrientation(ConveyedResource resource)
         {
-            return GameManager.Instance.GetTileOrientation(tile);
+            return orientation;
         }
 
         public virtual List<Vector2Int> GetExitOrientations()
         {
-            return new List<Vector2Int>(1) { GameManager.Instance.GetTileOrientation(tile) };
+            return new List<Vector2Int>(1) { orientation };
         }
 
         public void ResourceEnter(ConveyedResource resource)

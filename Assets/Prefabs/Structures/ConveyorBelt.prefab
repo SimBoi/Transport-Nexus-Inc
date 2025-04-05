@@ -888,9 +888,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66908f43802d66c408e108f86c0baa05, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  size: 1
   tile: {x: 0, y: 0}
+  orientation: {x: 0, y: 1}
   prefab: {fileID: 0}
   speed: 3
+  exitOrientation: {x: 0, y: 0}
   straightModel: {fileID: 6582179736565608105}
   rightTurnModel: {fileID: 7285241265149704422}
   leftTurnModel: {fileID: 8830853909521695623}
@@ -923,6 +926,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ui: {fileID: 856957569254571588}
+  focusPoint: {fileID: 7527421497840343232}
 --- !u!1 &5691783797942230226
 GameObject:
   m_ObjectHideFlags: 0

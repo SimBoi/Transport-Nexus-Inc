@@ -50,6 +50,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a9d473b70e2a4be4a8037cf1a28943c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  size: 1
+  tile: {x: 0, y: 0}
+  orientation: {x: 0, y: 1}
   prefab: {fileID: 0}
   port: {fileID: 3165189654588430616}
 --- !u!114 &14972942831900650
@@ -81,6 +84,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ui: {fileID: 9141987065868683106}
+  focusPoint: {fileID: 5118608641549579686}
 --- !u!1 &1427824654200927532
 GameObject:
   m_ObjectHideFlags: 0

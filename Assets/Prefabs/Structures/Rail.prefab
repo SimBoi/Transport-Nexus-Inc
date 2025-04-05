@@ -427,6 +427,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15bae41f2aadbef4dbea279791d8831d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  size: 1
+  tile: {x: 0, y: 0}
+  orientation: {x: 0, y: 1}
   prefab: {fileID: 0}
   straightRail: {fileID: 7923134732940334927}
   rightTurnRail: {fileID: 5913868020756667345}
@@ -445,7 +448,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: Rail
   icon: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
-  prefab: {fileID: 5442181633659526508}
+  type: 0
   materialCosts: 02000000010000000c000000
 --- !u!114 &8818040525995776363
 MonoBehaviour:
@@ -460,6 +463,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ui: {fileID: 6014967612627250635}
+  focusPoint: {fileID: 734989432430722767}
 --- !u!1 &5505179592693250341
 GameObject:
   m_ObjectHideFlags: 0

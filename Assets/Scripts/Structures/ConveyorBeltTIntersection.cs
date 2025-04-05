@@ -31,13 +31,11 @@ public class ConveyorBeltTIntersection : ActuatorConveyorBelt
 
     public override Vector2Int GetNextExitOrientation(ConveyedResource resource)
     {
-        Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
         return isRightTurn ? new Vector2Int(orientation.y, -orientation.x) : new Vector2Int(-orientation.y, orientation.x);
     }
 
     public override List<Vector2Int> GetExitOrientations()
     {
-        Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
         return new List<Vector2Int>
         {
             new Vector2Int(orientation.y, -orientation.x), // right turn

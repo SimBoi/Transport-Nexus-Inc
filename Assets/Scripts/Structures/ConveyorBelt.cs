@@ -9,8 +9,6 @@ public class ConveyorBelt : DynamicConveyorBelt
 
     public override void OnOrientConveyorBelt()
     {
-        Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
-
         if (exitOrientation == orientation) // straight conveyor belt
         {
             straightModel.SetActive(true);

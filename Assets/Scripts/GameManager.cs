@@ -187,102 +187,82 @@ public class GameManager : MonoBehaviour
     public bool AddStructure(Vector2Int tile, Vector2Int orientation, GameObject structurePrefab)
     {
         if (_tiles.ContainsKey(tile)) return false;
+        int size = structurePrefab.GetComponent<Structure>().size;
+        Vector2Int relativeUp = orientation;
+        Vector2Int relativeRight = new Vector2Int(relativeUp.y, -relativeUp.x);
+        for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) if (_tiles.ContainsKey(tile + x * relativeRight + y * relativeUp)) return false;
 
         Vector3 position = new Vector3(tile.x, 0, tile.y);
         Quaternion rotation = Quaternion.LookRotation(new Vector3(orientation.x, 0, orientation.y), Vector3.up);
-        GameObject instantiatedStructure;
+        Structure instantiatedStructure = Instantiate(structurePrefab, position, rotation).GetComponent<Structure>();
+        instantiatedStructure.tile = tile;
+        instantiatedStructure.orientation = orientation;
+        instantiatedStructure.prefab = structurePrefab;
+        for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _tiles.Add(tile + x * relativeRight + y * relativeUp, (orientation, instantiatedStructure));
 
-        if (structurePrefab.GetComponent<DynamicRail>())
+        if (instantiatedStructure is DynamicRail dynamicRail)
         {
-            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
-            instantiatedStructure.GetComponent<Structure>().tile = tile;
-            DynamicRail dynamicRail = instantiatedStructure.GetComponent<DynamicRail>();
-            dynamicRail.prefab = structurePrefab;
-            _tiles.Add(tile, (orientation, dynamicRail));
-            _rails.Add(tile, dynamicRail);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _rails.Add(tile + x * relativeRight + y * relativeUp, dynamicRail);
             ConnectRail(tile);
         }
-        else if (structurePrefab.GetComponent<SensorRail>())
+        else if (instantiatedStructure is SensorRail sensorRail)
         {
-            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
-            instantiatedStructure.GetComponent<Structure>().tile = tile;
-            SensorRail sensorRail = instantiatedStructure.GetComponent<SensorRail>();
-            sensorRail.prefab = structurePrefab;
-            _tiles.Add(tile, (orientation, sensorRail));
-            _rails.Add(tile, sensorRail);
-            _sensors.Add(tile, sensorRail);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
+            {
+                _rails.Add(tile + x * relativeRight + y * relativeUp, sensorRail);
+                _sensors.Add(tile + x * relativeRight + y * relativeUp, sensorRail);
+            }
             sensorRail.Initialize(signalNetworkGraph);
             ConnectRail(tile);
         }
-        else if (structurePrefab.GetComponent<ActuatorRail>())
+        else if (instantiatedStructure is ActuatorRail actuatorRail)
         {
-            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
-            instantiatedStructure.GetComponent<Structure>().tile = tile;
-            ActuatorRail actuatorRail = instantiatedStructure.GetComponent<ActuatorRail>();
-            actuatorRail.prefab = structurePrefab;
-            _tiles.Add(tile, (orientation, actuatorRail));
-            _rails.Add(tile, actuatorRail);
-            _actuators.Add(tile, actuatorRail);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
+            {
+                _rails.Add(tile + x * relativeRight + y * relativeUp, actuatorRail);
+                _actuators.Add(tile + x * relativeRight + y * relativeUp, actuatorRail);
+            }
             actuatorRail.Initialize(signalNetworkGraph);
             ConnectRail(tile);
         }
-        else if (structurePrefab.GetComponent<DynamicConveyorBelt>())
+        else if (instantiatedStructure is DynamicConveyorBelt dynamicConveyor)
         {
-            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
-            instantiatedStructure.GetComponent<Structure>().tile = tile;
-            DynamicConveyorBelt dynamicConveyor = instantiatedStructure.GetComponent<DynamicConveyorBelt>();
-            dynamicConveyor.prefab = structurePrefab;
-            _tiles.Add(tile, (orientation, dynamicConveyor));
-            _conveyors.Add(tile, dynamicConveyor);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _conveyors.Add(tile + x * relativeRight + y * relativeUp, dynamicConveyor);
             ConnectConveyor(tile);
         }
-        else if (structurePrefab.GetComponent<SensorConveyorBelt>())
+        else if (instantiatedStructure is SensorConveyorBelt sensorConveyor)
         {
-            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
-            instantiatedStructure.GetComponent<Structure>().tile = tile;
-            SensorConveyorBelt sensorConveyor = instantiatedStructure.GetComponent<SensorConveyorBelt>();
-            sensorConveyor.prefab = structurePrefab;
-            _tiles.Add(tile, (orientation, sensorConveyor));
-            _conveyors.Add(tile, sensorConveyor);
-            _sensors.Add(tile, sensorConveyor);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
+            {
+                _conveyors.Add(tile + x * relativeRight + y * relativeUp, sensorConveyor);
+                _sensors.Add(tile + x * relativeRight + y * relativeUp, sensorConveyor);
+            }
             sensorConveyor.Initialize(signalNetworkGraph);
             ConnectConveyor(tile);
         }
-        else if (structurePrefab.GetComponent<ActuatorConveyorBelt>())
+        else if (instantiatedStructure is ActuatorConveyorBelt actuatorConveyor)
         {
-            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
-            instantiatedStructure.GetComponent<Structure>().tile = tile;
-            ActuatorConveyorBelt actuatorConveyor = instantiatedStructure.GetComponent<ActuatorConveyorBelt>();
-            actuatorConveyor.prefab = structurePrefab;
-            _tiles.Add(tile, (orientation, actuatorConveyor));
-            _conveyors.Add(tile, actuatorConveyor);
-            _actuators.Add(tile, actuatorConveyor);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
+            {
+                _conveyors.Add(tile + x * relativeRight + y * relativeUp, actuatorConveyor);
+                _actuators.Add(tile + x * relativeRight + y * relativeUp, actuatorConveyor);
+            }
             actuatorConveyor.Initialize(signalNetworkGraph);
             ConnectConveyor(tile);
         }
-        else if (structurePrefab.GetComponent<Sensor>())
+        else if (instantiatedStructure is Sensor sensor)
         {
-            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
-            instantiatedStructure.GetComponent<Structure>().tile = tile;
-            Sensor sensor = instantiatedStructure.GetComponent<Sensor>();
-            sensor.prefab = structurePrefab;
-            _tiles.Add(tile, (orientation, sensor));
-            _sensors.Add(tile, sensor);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _sensors.Add(tile + x * relativeRight + y * relativeUp, sensor);
             sensor.Initialize(signalNetworkGraph);
         }
-        else if (structurePrefab.GetComponent<Processor>())
+        else if (instantiatedStructure is Processor processor)
         {
-            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
-            instantiatedStructure.GetComponent<Structure>().tile = tile;
-            Processor processor = instantiatedStructure.GetComponent<Processor>();
-            processor.prefab = structurePrefab;
-            _tiles.Add(tile, (orientation, processor));
-            _processors.Add(tile, processor);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _processors.Add(tile + x * relativeRight + y * relativeUp, processor);
             processor.Initialize(signalNetworkGraph);
 
             // chain input and output processors
             Vector2Int behindTile = tile - orientation;
-            Vector2Int frontTile = tile + orientation;
+            Vector2Int frontTile = tile + orientation; // TODO: size > 1 support for chaining
             if (_tiles.ContainsKey(behindTile))
             {
                 (Vector2Int orientation, Structure structure) behindStructure = _tiles[behindTile];
@@ -300,62 +280,54 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
-        else if (structurePrefab.GetComponent<Actuator>())
+        else if (instantiatedStructure is Actuator actuator)
         {
-            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
-            instantiatedStructure.GetComponent<Structure>().tile = tile;
-            Actuator actuator = instantiatedStructure.GetComponent<Actuator>();
-            actuator.prefab = structurePrefab;
-            _tiles.Add(tile, (orientation, actuator));
-            _actuators.Add(tile, actuator);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _actuators.Add(tile + x * relativeRight + y * relativeUp, actuator);
             actuator.Initialize(signalNetworkGraph);
         }
-        else if (structurePrefab.GetComponent<SplitterPort>())
+        else if (instantiatedStructure is SplitterPort splitterPort)
         {
-            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
-            instantiatedStructure.GetComponent<Structure>().tile = tile;
-            SplitterPort splitterPort = instantiatedStructure.GetComponent<SplitterPort>();
-            splitterPort.prefab = structurePrefab;
-            _tiles.Add(tile, (orientation, splitterPort));
-            _splitterPorts.Add(tile, splitterPort);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _splitterPorts.Add(tile + x * relativeRight + y * relativeUp, splitterPort);
             splitterPort.Initialize(signalNetworkGraph);
         }
         else
         {
+            Destroy(instantiatedStructure.gameObject);
             throw new Exception("Invalid structure type");
         }
 
-        FocusStructure(instantiatedStructure);
+        FocusStructure(instantiatedStructure.gameObject);
         return true;
     }
 
-    public void RotateStructure(GameObject structure, Vector2Int orientation = default)
+    public void RotateStructureClockwise(GameObject structure)
     {
-        Vector2Int tile = new Vector2Int(Mathf.RoundToInt(structure.transform.position.x), Mathf.RoundToInt(structure.transform.position.z));
-        RotateStructure(tile, orientation);
+        RotateStructureClockwise(structure.GetComponent<Structure>().tile);
     }
 
-    public void RotateStructure(Vector2Int tile, Vector2Int orientation = default)
+    public void RotateStructureClockwise(Vector2Int tile)
     {
         if (!_tiles.ContainsKey(tile)) throw new Exception("No structure found at position: " + tile);
 
         (Vector2Int oldOrientation, Structure structure) = _tiles[tile];
-        if (oldOrientation == orientation) return;
-        Vector2Int newOrientation = orientation == default ? new Vector2Int(oldOrientation.y, -oldOrientation.x) : orientation;
+        (Vector2Int newTile, Vector2Int newOrientation) = Structure.RotateClockwise(tile, oldOrientation, structure.size);
 
         if (!RemoveStructure(tile)) return;
-        AddStructure(tile, newOrientation, structure.prefab);
+        AddStructure(newTile, newOrientation, structure.prefab);
     }
 
     public bool RemoveStructure(GameObject structure)
     {
-        Vector2Int tile = new Vector2Int(Mathf.RoundToInt(structure.transform.position.x), Mathf.RoundToInt(structure.transform.position.z));
-        return RemoveStructure(tile);
+        return RemoveStructure(structure.GetComponent<Structure>().tile);
     }
 
     public bool RemoveStructure(Vector2Int tile)
     {
-        GameObject structure;
+        if (!_tiles.ContainsKey(tile)) throw new Exception("No structure found at position: " + tile);
+        Structure structure = _tiles[tile].structure;
+        int size = structure.size;
+        Vector2Int relativeUp = _tiles[tile].orientation;
+        Vector2Int relativeRight = new Vector2Int(relativeUp.y, -relativeUp.x);
 
         if (_rails.ContainsKey(tile))
         {
@@ -365,23 +337,17 @@ public class GameManager : MonoBehaviour
 
             if (_sensors.ContainsKey(tile))
             {
-                structure = _sensors[tile].gameObject;
                 _sensors[tile].outputPort.RemoveFromNetwork();
-                _sensors.Remove(tile);
+                for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _sensors.Remove(tile + x * relativeRight + y * relativeUp);
             }
             else if (_actuators.ContainsKey(tile))
             {
-                structure = _actuators[tile].gameObject;
                 foreach (Port inputPort in _actuators[tile].inputPorts) inputPort.RemoveFromNetwork();
-                _actuators.Remove(tile);
-            }
-            else
-            {
-                structure = ((DynamicRail)_rails[tile]).gameObject;
+                for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _actuators.Remove(tile + x * relativeRight + y * relativeUp);
             }
 
             DisconnectRail(tile);
-            _rails.Remove(tile);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _rails.Remove(tile + x * relativeRight + y * relativeUp);
         }
         else if (_conveyors.ContainsKey(tile))
         {
@@ -390,33 +356,25 @@ public class GameManager : MonoBehaviour
 
             if (_sensors.ContainsKey(tile))
             {
-                structure = _sensors[tile].gameObject;
                 _sensors[tile].outputPort.RemoveFromNetwork();
-                _sensors.Remove(tile);
+                for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _sensors.Remove(tile + x * relativeRight + y * relativeUp);
             }
             else if (_actuators.ContainsKey(tile))
             {
-                structure = _actuators[tile].gameObject;
                 foreach (Port inputPort in _actuators[tile].inputPorts) inputPort.RemoveFromNetwork();
-                _actuators.Remove(tile);
-            }
-            else
-            {
-                structure = ((DynamicConveyorBelt)_conveyors[tile]).gameObject;
+                for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _actuators.Remove(tile + x * relativeRight + y * relativeUp);
             }
 
             DisconnectConveyor(tile);
-            _conveyors.Remove(tile);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _conveyors.Remove(tile + x * relativeRight + y * relativeUp);
         }
         else if (_sensors.ContainsKey(tile))
         {
-            structure = _sensors[tile].gameObject;
             _sensors[tile].outputPort.RemoveFromNetwork();
-            _sensors.Remove(tile);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _sensors.Remove(tile + x * relativeRight + y * relativeUp);
         }
         else if (_processors.ContainsKey(tile))
         {
-            structure = _processors[tile].gameObject;
             Processor processor = _processors[tile];
 
             if (processor.IsInputChained()) processor.Unchain();
@@ -425,28 +383,22 @@ public class GameManager : MonoBehaviour
             foreach (Port inputPort in processor.inputPorts) inputPort.RemoveFromNetwork();
             processor.outputPort.RemoveFromNetwork();
 
-            _processors.Remove(tile);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _processors.Remove(tile + x * relativeRight + y * relativeUp);
         }
         else if (_actuators.ContainsKey(tile))
         {
-            structure = _actuators[tile].gameObject;
             foreach (Port inputPort in _actuators[tile].inputPorts) inputPort.RemoveFromNetwork();
-            _actuators.Remove(tile);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _actuators.Remove(tile + x * relativeRight + y * relativeUp);
         }
         else if (_splitterPorts.ContainsKey(tile))
         {
-            structure = _splitterPorts[tile].gameObject;
             _splitterPorts[tile].port.RemoveFromNetwork();
-            _splitterPorts.Remove(tile);
-        }
-        else
-        {
-            throw new Exception("No structure found at position: " + tile);
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _splitterPorts.Remove(tile + x * relativeRight + y * relativeUp);
         }
 
-        _tiles.Remove(tile);
+        for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _tiles.Remove(tile + x * relativeRight + y * relativeUp);
 
-        if (_isFocused && _focusedStructure == structure) Unfocus();
+        if (_isFocused && _focusedStructure == structure.gameObject) Unfocus();
 
         structure.GetComponent<Item>().Destroy();
         return true;
@@ -697,6 +649,19 @@ public class GameManager : MonoBehaviour
         if (_isFocused) Unfocus();
         _isFocused = true;
         _focusedStructure = structure;
+        Vector3 focusPosition;
+        if (_focusedStructure.GetComponentInChildren<StructureUI>())
+        {
+            focusPosition = _focusedStructure.GetComponentInChildren<StructureUI>().focusPoint.position;
+        }
+        else
+        {
+            Vector2Int orientation = GetTileOrientation(structure.GetComponent<Structure>().tile);
+            Vector3 relativeUp = new Vector3(orientation.x, 0, orientation.y);
+            Vector3 relativeRight = new Vector3(orientation.y, 0, -orientation.x);
+            int size = structure.GetComponent<Structure>().size;
+            focusPosition = structure.transform.position + size / 2f * (relativeRight + relativeUp);
+        }
 
         if (structureUI)
         {
@@ -704,19 +669,19 @@ public class GameManager : MonoBehaviour
         }
         if (portUI)
         {
-            HighlightDisconnectedPorts(structure.transform.position, excludePorts: excludePorts);
+            HighlightDisconnectedPorts(focusPosition, excludePorts: excludePorts);
         }
         if (buildingUI)
         {
             if (_buildingUI != null) Destroy(_buildingUI);
             Vector3 cameraDirection = Camera.main.transform.forward;
-            Vector3 position = structure.transform.position - cameraDirection * 0.5f + new Vector3(-0.75f, 0, -0.75f);
+            Vector3 position = focusPosition - cameraDirection * 0.5f + new Vector3(-0.75f, 0, -0.75f);
             Quaternion rotation = Quaternion.LookRotation(-cameraDirection, Vector3.up);
             _buildingUI = Instantiate(buildingUIPrefab, position, rotation);
             _buildingUI.GetComponent<BuildingUI>().structure = structure;
 
             // show rail extenders if the structure is connectable
-            Vector2Int tile = Vector3ToTile(structure.transform.position);
+            Vector2Int tile = Vector3ToTile(focusPosition);
             if (_rails.ContainsKey(tile))
             {
                 if (_rails[tile] is DynamicRail dynamicRail)
@@ -778,7 +743,7 @@ public class GameManager : MonoBehaviour
         {
             for (int y = -Mathf.FloorToInt(radius); y <= Mathf.FloorToInt(radius); y++)
             {
-                Vector2Int tile = new Vector2Int(x, y) + new Vector2Int(Mathf.FloorToInt(center.x), Mathf.FloorToInt(center.z));
+                Vector2Int tile = new Vector2Int(x, y) + Vector3ToTile(center);
                 if (!_tiles.ContainsKey(tile)) continue;
 
                 (Vector2Int _, Structure structure) = _tiles[tile];

@@ -9,7 +9,7 @@ public class BuildingUI : MonoBehaviour
 
     public void RotateStructure(BaseEventData eventData)
     {
-        GameManager.Instance.RotateStructure(structure);
+        GameManager.Instance.RotateStructureClockwise(structure);
     }
 
     public void RemoveStructure(BaseEventData eventData)

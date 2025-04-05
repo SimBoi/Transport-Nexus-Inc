@@ -3,6 +3,7 @@ using UnityEngine;
 public class StructureUI : MonoBehaviour
 {
     [SerializeField] private GameObject ui;
+    public Transform focusPoint;
 
     public void Focus()
     {

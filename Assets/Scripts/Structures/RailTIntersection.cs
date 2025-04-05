@@ -39,9 +39,8 @@ public class RailTIntersection : ActuatorRail
 
     public override List<Vector2Int> GetTrainOrientations()
     {
-        Vector2Int tileOrientation = GameManager.Instance.GetTileOrientation(tile);
         // { forward, left, right }
-        return new List<Vector2Int> { tileOrientation, new Vector2Int(-tileOrientation.y, tileOrientation.x), new Vector2Int(tileOrientation.y, -tileOrientation.x) };
+        return new List<Vector2Int> { orientation, new Vector2Int(-orientation.y, orientation.x), new Vector2Int(orientation.y, -orientation.x) };
     }
 
     protected override void WriteActuator(float[] inputSignals)
