@@ -20,6 +20,7 @@ public class GameManager : MonoBehaviour
     private Dictionary<Vector2Int, Actuator> _actuators = new();
     private Dictionary<Vector2Int, SplitterPort> _splitterPorts = new();
     private Dictionary<Vector2Int, Structure> _rails = new();
+    private Dictionary<Vector2Int, Structure> _conveyors = new();
 
     private List<Train> _trains = new();
 
@@ -31,12 +32,15 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject buildingUIPrefab;
     private GameObject _buildingUI;
     [SerializeField] private GameObject trainPrefab;
-    [SerializeField] private GameObject railExtenderPrefab;
+    [SerializeField] private GameObject ConnectableExtenderPrefab;
     private List<GameObject> _railExtenders = new();
 
     [SerializeField] private GameObject wirePrefab;
     [SerializeField] private Transform powerLevels;
     [SerializeField] private GameObject powerLevelUIPrefab;
+
+    [SerializeField] private GameObject connectableRailPrefab;
+    [SerializeField] private GameObject connectableConveyorPrefab;
 
     private void Awake()
     {
@@ -102,6 +106,7 @@ public class GameManager : MonoBehaviour
             else if (structure is Actuator actuator) _actuators.Add(tile, actuator);
             else if (structure is SplitterPort splitterPort) _splitterPorts.Add(tile, splitterPort);
             if (structure is DynamicRail || structure is SensorRail || structure is ActuatorRail) _rails.Add(tile, structure);
+            if (structure is DynamicConveyorBelt || structure is SensorConveyorBelt || structure is ActuatorConveyorBelt) _conveyors.Add(tile, structure);
         }
 
         // restore signal network graph and wires
@@ -158,6 +163,27 @@ public class GameManager : MonoBehaviour
     //////////////////////////////////// Tile Management ///////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
+    public static Vector2Int Vector3ToTile(Vector3 position)
+    {
+        return Vector2Int.RoundToInt(new Vector2(position.x, position.z));
+    }
+
+    public static Vector3 TileToVector3(Vector2Int tile)
+    {
+        return new Vector3(tile.x, 0, tile.y);
+    }
+
+    public Structure GetTileStructure(Vector2Int tile)
+    {
+        if (!_tiles.ContainsKey(tile)) return null;
+        return _tiles[tile].structure;
+    }
+
+    public Vector2Int GetTileOrientation(Vector2Int tile)
+    {
+        return _tiles[tile].orientation;
+    }
+
     public bool AddStructure(Vector2Int tile, Vector2Int orientation, GameObject structurePrefab)
     {
         if (_tiles.ContainsKey(tile)) return false;
@@ -169,6 +195,7 @@ public class GameManager : MonoBehaviour
         if (structurePrefab.GetComponent<DynamicRail>())
         {
             instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            instantiatedStructure.GetComponent<Structure>().tile = tile;
             DynamicRail dynamicRail = instantiatedStructure.GetComponent<DynamicRail>();
             dynamicRail.prefab = structurePrefab;
             _tiles.Add(tile, (orientation, dynamicRail));
@@ -178,6 +205,7 @@ public class GameManager : MonoBehaviour
         else if (structurePrefab.GetComponent<SensorRail>())
         {
             instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            instantiatedStructure.GetComponent<Structure>().tile = tile;
             SensorRail sensorRail = instantiatedStructure.GetComponent<SensorRail>();
             sensorRail.prefab = structurePrefab;
             _tiles.Add(tile, (orientation, sensorRail));
@@ -189,6 +217,7 @@ public class GameManager : MonoBehaviour
         else if (structurePrefab.GetComponent<ActuatorRail>())
         {
             instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            instantiatedStructure.GetComponent<Structure>().tile = tile;
             ActuatorRail actuatorRail = instantiatedStructure.GetComponent<ActuatorRail>();
             actuatorRail.prefab = structurePrefab;
             _tiles.Add(tile, (orientation, actuatorRail));
@@ -197,9 +226,44 @@ public class GameManager : MonoBehaviour
             actuatorRail.Initialize(signalNetworkGraph);
             ConnectRail(tile);
         }
+        else if (structurePrefab.GetComponent<DynamicConveyorBelt>())
+        {
+            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            instantiatedStructure.GetComponent<Structure>().tile = tile;
+            DynamicConveyorBelt dynamicConveyor = instantiatedStructure.GetComponent<DynamicConveyorBelt>();
+            dynamicConveyor.prefab = structurePrefab;
+            _tiles.Add(tile, (orientation, dynamicConveyor));
+            _conveyors.Add(tile, dynamicConveyor);
+            ConnectConveyor(tile);
+        }
+        else if (structurePrefab.GetComponent<SensorConveyorBelt>())
+        {
+            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            instantiatedStructure.GetComponent<Structure>().tile = tile;
+            SensorConveyorBelt sensorConveyor = instantiatedStructure.GetComponent<SensorConveyorBelt>();
+            sensorConveyor.prefab = structurePrefab;
+            _tiles.Add(tile, (orientation, sensorConveyor));
+            _conveyors.Add(tile, sensorConveyor);
+            _sensors.Add(tile, sensorConveyor);
+            sensorConveyor.Initialize(signalNetworkGraph);
+            ConnectConveyor(tile);
+        }
+        else if (structurePrefab.GetComponent<ActuatorConveyorBelt>())
+        {
+            instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            instantiatedStructure.GetComponent<Structure>().tile = tile;
+            ActuatorConveyorBelt actuatorConveyor = instantiatedStructure.GetComponent<ActuatorConveyorBelt>();
+            actuatorConveyor.prefab = structurePrefab;
+            _tiles.Add(tile, (orientation, actuatorConveyor));
+            _conveyors.Add(tile, actuatorConveyor);
+            _actuators.Add(tile, actuatorConveyor);
+            actuatorConveyor.Initialize(signalNetworkGraph);
+            ConnectConveyor(tile);
+        }
         else if (structurePrefab.GetComponent<Sensor>())
         {
             instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            instantiatedStructure.GetComponent<Structure>().tile = tile;
             Sensor sensor = instantiatedStructure.GetComponent<Sensor>();
             sensor.prefab = structurePrefab;
             _tiles.Add(tile, (orientation, sensor));
@@ -209,6 +273,7 @@ public class GameManager : MonoBehaviour
         else if (structurePrefab.GetComponent<Processor>())
         {
             instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            instantiatedStructure.GetComponent<Structure>().tile = tile;
             Processor processor = instantiatedStructure.GetComponent<Processor>();
             processor.prefab = structurePrefab;
             _tiles.Add(tile, (orientation, processor));
@@ -238,6 +303,7 @@ public class GameManager : MonoBehaviour
         else if (structurePrefab.GetComponent<Actuator>())
         {
             instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            instantiatedStructure.GetComponent<Structure>().tile = tile;
             Actuator actuator = instantiatedStructure.GetComponent<Actuator>();
             actuator.prefab = structurePrefab;
             _tiles.Add(tile, (orientation, actuator));
@@ -247,6 +313,7 @@ public class GameManager : MonoBehaviour
         else if (structurePrefab.GetComponent<SplitterPort>())
         {
             instantiatedStructure = Instantiate(structurePrefab, position, rotation);
+            instantiatedStructure.GetComponent<Structure>().tile = tile;
             SplitterPort splitterPort = instantiatedStructure.GetComponent<SplitterPort>();
             splitterPort.prefab = structurePrefab;
             _tiles.Add(tile, (orientation, splitterPort));
@@ -316,6 +383,31 @@ public class GameManager : MonoBehaviour
             DisconnectRail(tile);
             _rails.Remove(tile);
         }
+        else if (_conveyors.ContainsKey(tile))
+        {
+            List<ConveyedResource> resources = GetTileResources(tile);
+            foreach (ConveyedResource resource in resources) resource.ExitConveyPath();
+
+            if (_sensors.ContainsKey(tile))
+            {
+                structure = _sensors[tile].gameObject;
+                _sensors[tile].outputPort.RemoveFromNetwork();
+                _sensors.Remove(tile);
+            }
+            else if (_actuators.ContainsKey(tile))
+            {
+                structure = _actuators[tile].gameObject;
+                foreach (Port inputPort in _actuators[tile].inputPorts) inputPort.RemoveFromNetwork();
+                _actuators.Remove(tile);
+            }
+            else
+            {
+                structure = ((DynamicConveyorBelt)_conveyors[tile]).gameObject;
+            }
+
+            DisconnectConveyor(tile);
+            _conveyors.Remove(tile);
+        }
         else if (_sensors.ContainsKey(tile))
         {
             structure = _sensors[tile].gameObject;
@@ -378,9 +470,10 @@ public class GameManager : MonoBehaviour
         Destroy(wire);
     }
 
+    // called after placing a new rail, connects the rail to its neighbors
     public void ConnectRail(Vector2Int tile)
     {
-        if (!_rails.ContainsKey(tile)) throw new System.Exception("No rail found at position: " + tile);
+        if (!_rails.ContainsKey(tile)) throw new Exception("No rail found at position: " + tile);
 
         // find the possible neighbors of the rail
         Vector2Int[] neighbors;
@@ -430,6 +523,7 @@ public class GameManager : MonoBehaviour
         foreach (Vector2Int dir in compatibleConnections) if (_rails[tile + dir] is DynamicRail neighborRail) neighborRail.Connect(-dir);
     }
 
+    // disconnects the rail from all neighbors
     public void DisconnectRail(Vector2Int tile)
     {
         // get the neighbors of the rail
@@ -454,12 +548,6 @@ public class GameManager : MonoBehaviour
         foreach (Vector2Int dir in neighbors) if (_rails.ContainsKey(tile + dir) && _rails[tile + dir] is DynamicRail neighborRail && neighborRail.connections.Contains(-dir)) neighborRail.Disconnect(-dir);
     }
 
-    public Vector2Int GetTileOrientation(Vector2Int tile)
-    {
-        if (!_tiles.ContainsKey(tile)) throw new Exception("No structure found at position: " + tile);
-        return _tiles[tile].orientation;
-    }
-
     public Vector2Int GetNextTrainOrientation(Vector2Int tile, Vector2Int orientation)
     {
         if (!_rails.ContainsKey(tile)) return Vector2Int.zero;
@@ -469,19 +557,130 @@ public class GameManager : MonoBehaviour
             foreach (Vector2Int o in dynamicRail.trainOrientations) if (o != orientation) return -o;
             return Vector2Int.zero;
         }
-        else if (_rails[tile] is SensorRail sensorRail) return sensorRail.GetNextTrainOrientation(tile, orientation);
-        else if (_rails[tile] is ActuatorRail actuatorRail) return actuatorRail.GetNextTrainOrientation(tile, orientation);
+        else if (_rails[tile] is SensorRail sensorRail) return sensorRail.GetNextTrainOrientation(orientation);
+        else if (_rails[tile] is ActuatorRail actuatorRail) return actuatorRail.GetNextTrainOrientation(orientation);
         return Vector2Int.zero;
     }
 
     public List<Vector2Int> GetTrainOrientations(Vector2Int tile)
     {
-        if (!_rails.ContainsKey(tile)) return new List<Vector2Int>();
+        if (!_rails.ContainsKey(tile)) return null;
 
         if (_rails[tile] is DynamicRail dynamicRail) return dynamicRail.trainOrientations;
-        else if (_rails[tile] is SensorRail sensorRail) return sensorRail.GetTrainOrientations(tile);
-        else if (_rails[tile] is ActuatorRail actuatorRail) return actuatorRail.GetTrainOrientations(tile);
-        else return new List<Vector2Int>();
+        else if (_rails[tile] is SensorRail sensorRail) return sensorRail.GetTrainOrientations();
+        else if (_rails[tile] is ActuatorRail actuatorRail) return actuatorRail.GetTrainOrientations();
+        else return null;
+    }
+
+    // called after placing a new conveyor, connects the conveyor to its neighbors
+    public void ConnectConveyor(Vector2Int tile)
+    {
+        if (!_conveyors.ContainsKey(tile)) throw new Exception("No conveyor found at position: " + tile);
+
+        Vector2Int orientation = GetTileOrientation(tile);
+        Structure structure = GetTileStructure(tile);
+
+        // find the possible neighbors of the conveyor
+        Vector2Int[] neighbors = new Vector2Int[4] {
+            Vector2Int.down,
+            Vector2Int.right,
+            Vector2Int.up,
+            Vector2Int.left
+        };
+
+        // find compatible connections with neighbors
+        List<Vector2Int> compatibleConnections = new();
+        foreach (Vector2Int neighborDir in neighbors)
+        {
+            Vector2Int neighborTile = tile + neighborDir;
+            if (!_conveyors.ContainsKey(neighborTile)) continue;
+
+            if (_conveyors[neighborTile] is DynamicConveyorBelt neighborConveyor)
+            {
+                if (!neighborConveyor.CanConnect(-neighborDir)) continue;
+
+                compatibleConnections.Add(neighborDir);
+            }
+            else
+            {
+                Vector2Int neighborOrientation = GetTileOrientation(neighborTile);
+                if (neighborOrientation == neighborDir) compatibleConnections.Add(neighborDir);
+            }
+        }
+
+        // remove conveyors with opposite directions
+        for (int i = compatibleConnections.Count - 1; i >= 0; i--)
+        {
+            Vector2Int neighborOrientation = GetTileOrientation(tile + compatibleConnections[i]);
+            if (compatibleConnections[i] == -orientation && neighborOrientation != compatibleConnections[i]) continue; // input conveyor
+            if (neighborOrientation == compatibleConnections[i] && neighborOrientation != -orientation) continue; // output conveyor
+            compatibleConnections.RemoveAt(i);
+        }
+
+        // orient the conveyor if its a dynamic conveyor
+        if (_tiles[tile].structure is DynamicConveyorBelt)
+        {
+            if (compatibleConnections.Count == 0) ((DynamicConveyorBelt)_conveyors[tile]).exitOrientation = orientation;
+            foreach (Vector2Int dir in compatibleConnections) ((DynamicConveyorBelt)_conveyors[tile]).Connect(dir);
+        }
+
+        // reorient neighbors
+            foreach (Vector2Int dir in compatibleConnections) if (_conveyors[tile + dir] is DynamicConveyorBelt neighborConveyor) neighborConveyor.Connect(-dir);
+    }
+
+    // disconnects the conveyor from all neighbors
+    public void DisconnectConveyor(Vector2Int tile)
+    {
+        // get the neighbors of the conveyor
+        List<Vector2Int> neighbors;
+        if (_conveyors[tile] is DynamicConveyorBelt)
+        {
+            DynamicConveyorBelt dynamicConveyor = (DynamicConveyorBelt)_conveyors[tile];
+
+            neighbors = new();
+            foreach (Vector2Int dir in dynamicConveyor.connections) neighbors.Add(dir);
+
+            // disconnect the conveyor from its neighbors
+            foreach (Vector2Int dir in neighbors) dynamicConveyor.Disconnect(dir);
+        }
+        else
+        {
+            (Vector2Int orientation, _) = _tiles[tile];
+            neighbors = new List<Vector2Int> { orientation, -orientation };
+        }
+
+        // disconnect the neighbors from the conveyor
+        foreach (Vector2Int dir in neighbors) if (_conveyors.ContainsKey(tile + dir) && _conveyors[tile + dir] is DynamicConveyorBelt neighborConveyor && neighborConveyor.connections.Contains(-dir)) neighborConveyor.Disconnect(-dir);
+    }
+
+    public List<ConveyedResource> GetTileResources(Vector2Int tile)
+    {
+        if (!_conveyors.ContainsKey(tile)) return null;
+
+        if (_conveyors[tile] is DynamicConveyorBelt dynamicConveyor) return dynamicConveyor.resources;
+        else if (_conveyors[tile] is SensorConveyorBelt sensorConveyor) return sensorConveyor.resources;
+        else if (_conveyors[tile] is ActuatorConveyorBelt actuatorConveyor) return actuatorConveyor.resources;
+        else return null;
+    }
+
+    public Vector2Int GetNextConveyorExitOrientation(Vector2Int tile, ConveyedResource resource)
+    {
+        if (!_conveyors.ContainsKey(tile)) return Vector2Int.zero;
+
+        if (_conveyors[tile] is DynamicConveyorBelt dynamicConveyor) return dynamicConveyor.exitOrientation;
+        else if (_conveyors[tile] is SensorConveyorBelt sensorConveyor) return sensorConveyor.GetNextExitOrientation(resource);
+        else if (_conveyors[tile] is ActuatorConveyorBelt actuatorConveyor) return actuatorConveyor.GetNextExitOrientation(resource);
+        else return Vector2Int.zero;
+    }
+
+    public List<Vector2Int> GetConveyorExitOrientations(Vector2Int tile)
+    {
+        if (!_conveyors.ContainsKey(tile)) return null;
+
+        if (_conveyors[tile] is DynamicConveyorBelt dynamicConveyor) return new List<Vector2Int>(1) { dynamicConveyor.exitOrientation };
+        else if (_conveyors[tile] is SensorConveyorBelt sensorConveyor) return sensorConveyor.GetExitOrientations();
+        else if (_conveyors[tile] is ActuatorConveyorBelt actuatorConveyor) return actuatorConveyor.GetExitOrientations();
+        else return null;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -516,19 +715,57 @@ public class GameManager : MonoBehaviour
             _buildingUI = Instantiate(buildingUIPrefab, position, rotation);
             _buildingUI.GetComponent<BuildingUI>().structure = structure;
 
-            // show rail extenders if the structure is a rail
-            Vector2Int tile = new Vector2Int(Mathf.RoundToInt(structure.transform.position.x), Mathf.RoundToInt(structure.transform.position.z));
+            // show rail extenders if the structure is connectable
+            Vector2Int tile = Vector3ToTile(structure.transform.position);
             if (_rails.ContainsKey(tile))
             {
                 if (_rails[tile] is DynamicRail dynamicRail)
                 {
                     List<Vector2Int> orientations = new List<Vector2Int> { Vector2Int.down, Vector2Int.right, Vector2Int.up, Vector2Int.left };
-                    foreach (Vector2Int orientation in orientations) if (!_tiles.ContainsKey(tile + orientation) && dynamicRail.CanConnect(orientation)) ShowRailExtender(tile, orientation);
+                    foreach (Vector2Int orientation in orientations)
+                    {
+                        if (!_tiles.ContainsKey(tile + orientation) && dynamicRail.CanConnect(orientation))
+                        {
+                            ShowConnectableExtender(tile, orientation, connectableRailPrefab);
+                        }
+                    }
                 }
                 else
                 {
                     List<Vector2Int> orientations = GetTrainOrientations(tile);
-                    foreach (Vector2Int orientation in orientations) if (!_tiles.ContainsKey(tile - orientation)) ShowRailExtender(tile, -orientation);
+                    foreach (Vector2Int orientation in orientations)
+                    {
+                        if (!_tiles.ContainsKey(tile - orientation))
+                        {
+                            ShowConnectableExtender(tile, -orientation, connectableRailPrefab);
+                        }
+                    }
+                }
+            }
+            else if (_conveyors.ContainsKey(tile))
+            {
+                if (_conveyors[tile] is DynamicConveyorBelt dynamicConveyor)
+                {
+                    List<Vector2Int> orientations = new List<Vector2Int> { Vector2Int.down, Vector2Int.right, Vector2Int.up, Vector2Int.left };
+                    foreach (Vector2Int orientation in orientations)
+                    {
+                        if (!_tiles.ContainsKey(tile + orientation) && dynamicConveyor.CanConnect(orientation))
+                        {
+                            ShowConnectableExtender(tile, orientation, connectableConveyorPrefab, orientation == -GetTileOrientation(tile));
+                        }
+                    }
+                }
+                else
+                {
+                    List<Vector2Int> orientations = GetConveyorExitOrientations(tile);
+                    orientations.Add(-GetTileOrientation(tile));
+                    foreach (Vector2Int orientation in orientations)
+                    {
+                        if (!_tiles.ContainsKey(tile + orientation))
+                        {
+                            ShowConnectableExtender(tile, orientation, connectableConveyorPrefab, orientation == -GetTileOrientation(tile));
+                        }
+                    }
                 }
             }
         }
@@ -604,14 +841,16 @@ public class GameManager : MonoBehaviour
         _highlightedPorts = portsToKeep;
     }
 
-    public void ShowRailExtender(Vector2Int tile, Vector2Int orientation)
+    public void ShowConnectableExtender(Vector2Int tile, Vector2Int orientation, GameObject connectablePrefab, bool isReversed = false)
     {
         tile += orientation;
         Vector3 position = new Vector3(tile.x, 0, tile.y);
         Quaternion rotation = Quaternion.LookRotation(new Vector3(orientation.x, 0, orientation.y), Vector3.up);
-        GameObject railExtender = Instantiate(railExtenderPrefab, position, rotation);
-        railExtender.GetComponent<RailExtender>().tile = tile;
-        _railExtenders.Add(railExtender);
+        ConnectableExtender extender = Instantiate(ConnectableExtenderPrefab, position, rotation).GetComponent<ConnectableExtender>();
+        extender.connectablePrefab = connectablePrefab;
+        extender.tile = tile;
+        extender.orientation = isReversed ? -orientation : orientation;
+        _railExtenders.Add(extender.gameObject);
     }
 
     public void FocusTrain(GameObject train)
@@ -700,6 +939,26 @@ public class GameManager : MonoBehaviour
         if (_rails[tile] is DynamicRail dynamicRail) dynamicRail.TrainExit(train);
         else if (_rails[tile] is SensorRail sensorRail) sensorRail.TrainExit(train);
         else if (_rails[tile] is ActuatorRail actuatorRail) actuatorRail.TrainExit(train);
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////// Conveyors //////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public void ResourceEnterTile(ConveyedResource resource, Vector2Int tile)
+    {
+        if (_conveyors[tile] is DynamicConveyorBelt dynamicConveyor) dynamicConveyor.ResourceEnter(resource);
+        else if (_conveyors[tile] is SensorConveyorBelt sensorConveyor) sensorConveyor.ResourceEnter(resource);
+        else if (_conveyors[tile] is ActuatorConveyorBelt actuatorConveyor) actuatorConveyor.ResourceEnter(resource);
+        else throw new Exception("No conveyor found at position: " + tile);
+    }
+
+    public void ResourceExitTile(ConveyedResource resource, Vector2Int tile)
+    {
+        if (_conveyors[tile] is DynamicConveyorBelt dynamicConveyor) dynamicConveyor.ResourceExit(resource);
+        else if (_conveyors[tile] is SensorConveyorBelt sensorConveyor) sensorConveyor.ResourceExit(resource);
+        else if (_conveyors[tile] is ActuatorConveyorBelt actuatorConveyor) actuatorConveyor.ResourceExit(resource);
+        else throw new Exception("No conveyor found at position: " + tile);
     }
 }
 

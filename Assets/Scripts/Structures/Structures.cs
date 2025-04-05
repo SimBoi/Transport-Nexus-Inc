@@ -2,11 +2,14 @@ using System.Collections.Generic;
 using UnityEngine;
 using Signals;
 using Newtonsoft.Json;
+using Inventories;
+using System.Data;
 
 namespace Structures
 {
     public class Structure : MonoBehaviour, ISavable
     {
+        public Vector2Int tile = Vector2Int.zero; // the tile the structure is on
         [HideInInspector] public GameObject prefab; // must be set by the instantiator
 
         private int _id = -1;
@@ -20,8 +23,19 @@ namespace Structures
             set => _id = value;
         }
         public bool ShouldInstantiateOnLoad() => true;
-        public virtual string GetStateJson() { return ""; }
-        public virtual void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup) { }
+
+        public virtual string GetStateJson()
+        {
+            return JsonConvert.SerializeObject((
+                (tile.x, tile.y)
+            ));
+        }
+
+        public virtual void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            var state = JsonConvert.DeserializeObject<(int, int)>(stateJson);
+            tile = new Vector2Int(state.Item1, state.Item2);
+        }
     }
 
     public class Sensor : Structure
@@ -224,10 +238,53 @@ namespace Structures
         }
     }
 
-    // base class for rail structures that can be connected to each other along different orientations
-    public class DynamicRail : Structure
+    // base structure class for all structures that can connect with nearby structures
+    public class ConnectableStructure : Structure
     {
-        public List<Vector2Int> connections { get; private set; } = new List<Vector2Int>(2);
+        public List<Vector2Int> connections { get; private set; } = new List<Vector2Int>(2); // connections to other structures by direction
+
+        public override string GetStateJson()
+        {
+            CombinedState combinedState = new()
+            {
+                baseState = base.GetStateJson(),
+                inheritedState = JsonConvert.SerializeObject(connections.ToArray())
+            };
+            return JsonConvert.SerializeObject(combinedState);
+        }
+
+        public override void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            var combinedState = JsonConvert.DeserializeObject<CombinedState>(stateJson);
+            base.RestoreStateJson(combinedState.baseState, idLookup);
+            var state = JsonConvert.DeserializeObject<Vector2Int[]>(combinedState.inheritedState);
+
+            connections = new List<Vector2Int>(state);
+        }
+
+        public virtual bool CanConnect(Vector2Int dir)
+        {
+            return connections.Count < 2 || connections.Contains(dir);
+        }
+
+        public void Connect(Vector2Int dir)
+        {
+            connections.Add(dir);
+            OnConnect(dir);
+        }
+
+        public void Disconnect(Vector2Int dir)
+        {
+            connections.Remove(dir);
+            OnDisconnect(dir);
+        }
+
+        public virtual void OnConnect(Vector2Int dir) { }
+        public virtual void OnDisconnect(Vector2Int dir) { }
+    }
+
+    public class DynamicRail : ConnectableStructure
+    {
         public List<Vector2Int> trainOrientations { get; private set; } = new List<Vector2Int>(2) { Vector2Int.up, Vector2Int.down };
         public List<Train> trains { get; private set; } = new List<Train>();
 
@@ -237,7 +294,6 @@ namespace Structures
             {
                 baseState = base.GetStateJson(),
                 inheritedState = JsonConvert.SerializeObject((
-                    connections.ToArray(),
                     trainOrientations.ToArray(),
                     trains.ConvertAll(t => t.ID).ToArray()
                 ))
@@ -251,26 +307,18 @@ namespace Structures
             base.RestoreStateJson(combinedState.baseState, idLookup);
             var state = JsonConvert.DeserializeObject<(
                 Vector2Int[],
-                Vector2Int[],
                 int[]
             )>(combinedState.inheritedState);
 
-            connections = new List<Vector2Int>(state.Item1);
-            trainOrientations = new List<Vector2Int>(state.Item2);
-            trains = new List<Train>(state.Item3.Length);
-            foreach (int trainId in state.Item3) trains.Add((Train)idLookup[trainId]);
+            trainOrientations = new List<Vector2Int>(state.Item1);
+            trains = new List<Train>(state.Item2.Length);
+            foreach (int trainId in state.Item2) trains.Add((Train)idLookup[trainId]);
 
             OnOrientRail();
         }
 
-        public bool CanConnect(Vector2Int dir)
+        public override void OnConnect(Vector2Int dir)
         {
-            return connections.Count < 2 || connections.Contains(dir);
-        }
-
-        public void Connect(Vector2Int dir)
-        {
-            connections.Add(dir);
             if (connections.Count == 1)
             {
                 trainOrientations[0] = -dir;
@@ -284,9 +332,8 @@ namespace Structures
             OnOrientRail();
         }
 
-        public void Disconnect(Vector2Int dir)
+        public override void OnDisconnect(Vector2Int dir)
         {
-            connections.Remove(dir);
             if (connections.Count == 1)
             {
                 trainOrientations[0] = -connections[0];
@@ -314,7 +361,7 @@ namespace Structures
             trains.Remove(train);
         }
 
-        protected virtual void OnOrientRail() { }
+        public virtual void OnOrientRail() { }
         protected virtual void OnTrainEnter(Train train) { }
         protected virtual void OnTrainExit(Train train) { }
     }
@@ -343,14 +390,14 @@ namespace Structures
             foreach (int trainId in state) trains.Add((Train)idLookup[trainId]);
         }
 
-        public virtual Vector2Int GetNextTrainOrientation(Vector2Int tile, Vector2Int orientation)
+        public virtual Vector2Int GetNextTrainOrientation(Vector2Int orientation)
         {
-            List<Vector2Int> orientations = GetTrainOrientations(tile);
+            List<Vector2Int> orientations = GetTrainOrientations();
             foreach (Vector2Int o in orientations) if (o != orientation) return -o;
             return Vector2Int.zero;
         }
 
-        public virtual List<Vector2Int> GetTrainOrientations(Vector2Int tile)
+        public virtual List<Vector2Int> GetTrainOrientations()
         {
             Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
             return new List<Vector2Int>(2) { orientation, -orientation };
@@ -398,14 +445,14 @@ namespace Structures
             foreach (int trainId in state) trains.Add((Train)idLookup[trainId]);
         }
 
-        public virtual Vector2Int GetNextTrainOrientation(Vector2Int tile, Vector2Int orientation)
+        public virtual Vector2Int GetNextTrainOrientation(Vector2Int orientation)
         {
-            List<Vector2Int> orientations = GetTrainOrientations(tile);
+            List<Vector2Int> orientations = GetTrainOrientations();
             foreach (Vector2Int o in orientations) if (o != orientation) return -o;
             return Vector2Int.zero;
         }
 
-        public virtual List<Vector2Int> GetTrainOrientations(Vector2Int tile)
+        public virtual List<Vector2Int> GetTrainOrientations()
         {
             Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
             return new List<Vector2Int>(2) { orientation, -orientation };
@@ -427,5 +474,234 @@ namespace Structures
 
         protected virtual void OnTrainEnter(Train train) { }
         protected virtual void OnTrainExit(Train train) { }
+    }
+
+    public class DynamicConveyorBelt : ConnectableStructure
+    {
+        public float speed = 1f;
+        public Vector2Int exitOrientation;
+        public List<ConveyedResource> resources { get; private set; } = new List<ConveyedResource>(2);
+
+        public override string GetStateJson()
+        {
+            CombinedState combinedState = new()
+            {
+                baseState = base.GetStateJson(),
+                inheritedState = JsonConvert.SerializeObject((
+                    speed,
+                    (exitOrientation.x, exitOrientation.y),
+                    resources.ConvertAll(r => r.ID).ToArray()
+                ))
+            };
+            return JsonConvert.SerializeObject(combinedState);
+        }
+
+        public override void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            var combinedState = JsonConvert.DeserializeObject<CombinedState>(stateJson);
+            base.RestoreStateJson(combinedState.baseState, idLookup);
+            var state = JsonConvert.DeserializeObject<(
+                float,
+                (int, int),
+                int[]
+            )>(combinedState.inheritedState);
+
+            speed = state.Item1;
+            exitOrientation = new Vector2Int(state.Item2.Item1, state.Item2.Item2);
+            resources = new List<ConveyedResource>(state.Item3.Length);
+            foreach (int resourceId in state.Item3) resources.Add((ConveyedResource)idLookup[resourceId]);
+
+            OnOrientConveyorBelt();
+        }
+
+        public void Update()
+        {
+            Vector2Int nextTile = tile + exitOrientation;
+            List<ConveyedResource> nextTileResources = GameManager.Instance.GetTileResources(nextTile);
+            for (int i = resources.Count - 1; i >= 0; i--) resources[i].Convey(speed, resources, nextTileResources);
+        }
+
+        public override bool CanConnect(Vector2Int dir)
+        {
+            if (connections.Contains(dir)) return true;
+            if (connections.Count == 0) return true;
+
+            Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
+            if (connections.Count == 1)
+            {
+                if (connections[0] == exitOrientation && dir == -orientation) return true;
+                else if (connections[0] != exitOrientation && dir != -orientation) return true;
+                else return false;
+            }
+
+            return false;
+        }
+
+        public override void OnConnect(Vector2Int dir)
+        {
+            // update exit orientation
+            Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
+            if (orientation != -dir) exitOrientation = dir;
+            else if (connections.Count == 1) exitOrientation = orientation;
+
+            // update resources interpolation
+            foreach (ConveyedResource resource in resources) resource.NewPath(orientation, exitOrientation);
+
+            OnOrientConveyorBelt();
+        }
+
+        public void ResourceEnter(ConveyedResource resource)
+        {
+            if (resources.Contains(resource)) throw new System.Exception("Resource already on conveyor belt.");
+            resources.Add(resource);
+        }
+
+        public void ResourceExit(ConveyedResource resource)
+        {
+            if (!resources.Contains(resource)) throw new System.Exception("Resource not on conveyor belt.");
+            resources.Remove(resource);
+        }
+
+        public virtual void OnOrientConveyorBelt() { }
+    }
+
+    public class SensorConveyorBelt : Sensor
+    {
+        public float speed = 1f;
+        public List<ConveyedResource> resources { get; private set; } = new List<ConveyedResource>(2);
+
+        public override string GetStateJson()
+        {
+            CombinedState combinedState = new()
+            {
+                baseState = base.GetStateJson(),
+                inheritedState = JsonConvert.SerializeObject((
+                    speed,
+                    resources.ConvertAll(r => r.ID).ToArray()
+                ))
+            };
+            return JsonConvert.SerializeObject(combinedState);
+        }
+
+        public override void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            var combinedState = JsonConvert.DeserializeObject<CombinedState>(stateJson);
+            base.RestoreStateJson(combinedState.baseState, idLookup);
+            var state = JsonConvert.DeserializeObject<(
+                float,
+                int[]
+            )>(combinedState.inheritedState);
+
+            speed = state.Item1;
+            resources = new List<ConveyedResource>(state.Item2.Length);
+            foreach (int resourceId in state.Item2) resources.Add((ConveyedResource)idLookup[resourceId]);
+        }
+
+        public void Update()
+        {
+            for (int i = resources.Count - 1; i >= 0; i--)
+            {
+                Vector2Int nextTile = tile + GetNextExitOrientation(resources[i]);
+                List<ConveyedResource> nextTileResources = GameManager.Instance.GetTileResources(nextTile);
+                resources[i].Convey(speed, resources, nextTileResources);
+            }
+        }
+
+        public virtual Vector2Int GetNextExitOrientation(ConveyedResource resource)
+        {
+            return GameManager.Instance.GetTileOrientation(tile);
+        }
+
+        public virtual List<Vector2Int> GetExitOrientations()
+        {
+            return new List<Vector2Int>(1) { GameManager.Instance.GetTileOrientation(tile) };
+        }
+
+        public void ResourceEnter(ConveyedResource resource)
+        {
+            if (resources.Contains(resource)) throw new System.Exception("Resource already on conveyor belt.");
+            resources.Add(resource);
+            OnResourceEnter(resource);
+        }
+
+        public void ResourceExit(ConveyedResource resource)
+        {
+            if (!resources.Contains(resource)) throw new System.Exception("Resource not on conveyor belt.");
+            resources.Remove(resource);
+            OnResourceExit(resource);
+        }
+
+        public virtual void OnResourceEnter(ConveyedResource resource) { }
+        public virtual void OnResourceExit(ConveyedResource resource) { }
+    }
+
+    public class ActuatorConveyorBelt : Actuator
+    {
+        public float speed = 1f;
+        public List<ConveyedResource> resources { get; private set; } = new List<ConveyedResource>(2);
+
+        public override string GetStateJson()
+        {
+            CombinedState combinedState = new()
+            {
+                baseState = base.GetStateJson(),
+                inheritedState = JsonConvert.SerializeObject((
+                    speed,
+                    resources.ConvertAll(r => r.ID).ToArray()
+                ))
+            };
+            return JsonConvert.SerializeObject(combinedState);
+        }
+
+        public override void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            var combinedState = JsonConvert.DeserializeObject<CombinedState>(stateJson);
+            base.RestoreStateJson(combinedState.baseState, idLookup);
+            var state = JsonConvert.DeserializeObject<(
+                float,
+                int[]
+            )>(combinedState.inheritedState);
+
+            speed = state.Item1;
+            resources = new List<ConveyedResource>(state.Item2.Length);
+            foreach (int resourceId in state.Item2) resources.Add((ConveyedResource)idLookup[resourceId]);
+        }
+
+        public void Update()
+        {
+            for (int i = resources.Count - 1; i >= 0; i--)
+            {
+                Vector2Int nextTile = tile + GetNextExitOrientation(resources[i]);
+                List<ConveyedResource> nextTileResources = GameManager.Instance.GetTileResources(nextTile);
+                resources[i].Convey(speed, resources, nextTileResources);
+            }
+        }
+
+        public virtual Vector2Int GetNextExitOrientation(ConveyedResource resource)
+        {
+            return GameManager.Instance.GetTileOrientation(tile);
+        }
+
+        public virtual List<Vector2Int> GetExitOrientations()
+        {
+            return new List<Vector2Int>(1) { GameManager.Instance.GetTileOrientation(tile) };
+        }
+
+        public void ResourceEnter(ConveyedResource resource)
+        {
+            if (resources.Contains(resource)) throw new System.Exception("Resource already on conveyor belt.");
+            resources.Add(resource);
+            OnResourceEnter(resource);
+        }
+
+        public void ResourceExit(ConveyedResource resource)
+        {
+            if (!resources.Contains(resource)) throw new System.Exception("Resource not on conveyor belt.");
+            resources.Remove(resource);
+            OnResourceExit(resource);
+        }
+
+        public virtual void OnResourceEnter(ConveyedResource resource) { }
+        public virtual void OnResourceExit(ConveyedResource resource) { }
     }
 }

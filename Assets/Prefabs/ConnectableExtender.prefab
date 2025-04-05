@@ -266,7 +266,7 @@ GameObject:
   - component: {fileID: 1719592551139784219}
   - component: {fileID: -1046015015928840431}
   m_Layer: 0
-  m_Name: RailExtender
+  m_Name: ConnectableExtender
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -26,12 +26,12 @@ namespace Inventories
 
             if (type == ItemType.Structure)
             {
-                Vector2Int tile = Vector2Int.RoundToInt(new Vector2(position.x, position.z));
+                Vector2Int tile = GameManager.Vector3ToTile(position);
                 if (!GameManager.Instance.AddStructure(tile, placementOrientation, gameObject)) return false;
             }
             else if (type == ItemType.Locomotive)
             {
-                Vector2Int tile = Vector2Int.RoundToInt(new Vector2(position.x, position.z));
+                Vector2Int tile = GameManager.Vector3ToTile(position);
                 if (!GameManager.Instance.BuildTrain(tile)) return false;
             }
             else if (type == ItemType.Cart)

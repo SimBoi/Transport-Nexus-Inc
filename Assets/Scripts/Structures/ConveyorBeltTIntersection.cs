@@ -1,10 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using Inventories;
 using Newtonsoft.Json;
 using Structures;
 using UnityEngine;
 
-public class RailTIntersection : ActuatorRail
+public class ConveyorBeltTIntersection : ActuatorConveyorBelt
 {
     [SerializeField] private GameObject rightTurnModel;
     [SerializeField] private GameObject leftTurnModel;
@@ -25,33 +26,33 @@ public class RailTIntersection : ActuatorRail
         CombinedState state = JsonConvert.DeserializeObject<CombinedState>(stateJson);
         base.RestoreStateJson(state.baseState, idLookup);
         isRightTurn = JsonConvert.DeserializeObject<bool>(state.inheritedState);
-        OrientRail();
+        OrientBelt();
     }
 
-    public override Vector2Int GetNextTrainOrientation(Vector2Int orientation)
+    public override Vector2Int GetNextExitOrientation(ConveyedResource resource)
     {
-        List<Vector2Int> orientations = GetTrainOrientations();
-        if (orientation == orientations[0]) return isRightTurn ? orientations[2] : orientations[1];
-        else if (orientation == orientations[1]) return isRightTurn ? -orientations[0] : orientation;
-        else if (orientation == orientations[2]) return isRightTurn ? orientation : -orientations[0];
-        return Vector2Int.zero;
+        Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
+        return isRightTurn ? new Vector2Int(orientation.y, -orientation.x) : new Vector2Int(-orientation.y, orientation.x);
     }
 
-    public override List<Vector2Int> GetTrainOrientations()
+    public override List<Vector2Int> GetExitOrientations()
     {
-        Vector2Int tileOrientation = GameManager.Instance.GetTileOrientation(tile);
-        // { forward, left, right }
-        return new List<Vector2Int> { tileOrientation, new Vector2Int(-tileOrientation.y, tileOrientation.x), new Vector2Int(tileOrientation.y, -tileOrientation.x) };
+        Vector2Int orientation = GameManager.Instance.GetTileOrientation(tile);
+        return new List<Vector2Int>
+        {
+            new Vector2Int(orientation.y, -orientation.x), // right turn
+            new Vector2Int(-orientation.y, orientation.x) // left turn
+        };
     }
 
     protected override void WriteActuator(float[] inputSignals)
     {
         isRightTurn = inputSignals[0] == 0;
 
-        OrientRail();
+        OrientBelt();
     }
 
-    public void OrientRail()
+    public void OrientBelt()
     {
         if (isRightTurn)
         {

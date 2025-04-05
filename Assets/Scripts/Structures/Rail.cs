@@ -7,7 +7,7 @@ public class Rail : DynamicRail
     [SerializeField] private GameObject rightTurnRail;
     [SerializeField] private GameObject leftTurnRail;
 
-    protected override void OnOrientRail()
+    public override void OnOrientRail()
     {
         // straight rail
         if (trainOrientations[0] == -trainOrientations[1])

@@ -232,12 +232,12 @@ public class Train : MonoBehaviour, ISavable
     {
         if (speed > 0 || headInterpolation != pathHalfSegments.Count - 1) throw new System.Exception("Cannot remove carts while the train is moving");
 
-        // TODO
+        // TODO: remove cart logic
     }
 
     public void Crash()
     {
-        // TODO
+        // TODO: replace train with a wrecked train model
         Debug.Log("Crash!");
         speed = 0;
         isBraking = true;
