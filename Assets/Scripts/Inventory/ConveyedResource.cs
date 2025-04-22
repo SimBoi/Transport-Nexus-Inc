@@ -9,12 +9,15 @@ namespace Inventories
 {
     public class ConveyedResource : MonoBehaviour, ISavable
     {
+        public Materials materialType;
         [SerializeField] private float resourceRadius = 0.2f; // the radius of the resource for collision detection
+        [SerializeField] private GameObject model;
         private Vector2Int tile; // the tile the resource is on
         private List<Vector3> pathHalfSegments = new(3); // the 3d points defining the half segments along the path
         private float interpolation; // the interpolation value between the first and last points in the path half segments list, each half segment is 1 unit long in interpolation space
         private Vector2Int exitOrientation; // the direction of the next tile to step into
-        bool isOnBelt = false; // whether the resource is on a conveyor belt or dropped on the ground
+        private bool isOnBelt = false; // whether the resource is on a conveyor belt or dropped on the ground
+        private bool isInInventory = false; // whether the resource is in an inventory or not
 
         private int _id = -1;
         public int ID
@@ -26,6 +29,9 @@ namespace Inventories
             }
             set => _id = value;
         }
+
+        public string TypeName => GetType().ToString() + materialType.ToString();
+
         public bool ShouldInstantiateOnLoad() => true;
 
         public string GetStateJson()
@@ -35,18 +41,20 @@ namespace Inventories
                 pathHalfSegments.ConvertAll(point => (point.x, point.y, point.z)),
                 interpolation,
                 (exitOrientation.x, exitOrientation.y),
-                isOnBelt
+                isOnBelt,
+                isInInventory
             ));
         }
 
         public void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
         {
-            var state = JsonConvert.DeserializeObject<((int, int), List<(float, float, float)>, float, (int, int), bool)>(stateJson);
+            var state = JsonConvert.DeserializeObject<((int, int), List<(float, float, float)>, float, (int, int), bool, bool)>(stateJson);
             tile = new Vector2Int(state.Item1.Item1, state.Item1.Item2);
             pathHalfSegments = state.Item2.ConvertAll(tuple => new Vector3(tuple.Item1, tuple.Item2, tuple.Item3));
             interpolation = state.Item3;
             exitOrientation = new Vector2Int(state.Item4.Item1, state.Item4.Item2);
             isOnBelt = state.Item5;
+            isInInventory = state.Item6;
         }
 
         public void InitializeConveyPath(Vector2Int initialTile, Vector2Int initialOrientation, Vector2Int initialExitOrientation)
@@ -57,25 +65,43 @@ namespace Inventories
             isOnBelt = true;
         }
 
-        public void ExitConveyPath()
+        public bool TryEnterConveyPath(Vector2Int tile)
         {
-            isOnBelt = false;
-        }
-
-        public void Update()
-        {
-            if (isOnBelt) return;
-
             // check if a conveyor belt has been placed under the resource
-            Vector2Int tile = GameManager.Vector3ToTile(transform.position);
             List<ConveyedResource> resourcesOnTile = GameManager.Instance.GetTileResources(tile);
-            if (resourcesOnTile == null) return;
+            if (resourcesOnTile == null) return false;
 
             // check if the resource will overlap with other resources on the center of the tile
-            if (IsOverlappingWith(GameManager.TileToVector3(tile), resourcesOnTile)) return;
+            if (IsOverlappingWith(GameManager.TileToVector3(tile), resourcesOnTile)) return false;
 
             InitializeConveyPath(tile, GameManager.Instance.GetTileOrientation(tile), GameManager.Instance.GetNextConveyorExitOrientation(tile, this));
             GameManager.Instance.ResourceEnterTile(this, tile);
+            return true;
+        }
+
+        public void ExitConveyPath()
+        {
+            isOnBelt = false;
+            GameManager.Instance.ResourceExitTile(this, tile);
+        }
+
+        public void EnterInventory()
+        {
+            model.SetActive(false);
+            isInInventory = true;
+        }
+
+        public void ExitInventory()
+        {
+            model.SetActive(true);
+            isInInventory = false;
+        }
+
+        public void FixedUpdate()
+        {
+            if (isOnBelt || isInInventory) return;
+
+            TryEnterConveyPath(GameManager.Vector3ToTile(transform.position));
         }
 
         public void Convey(float speed, List<ConveyedResource> resourcesOnTile, List<ConveyedResource> resourcesOnNextTile)
@@ -169,7 +195,8 @@ namespace Inventories
 
         public void DestroyResource()
         {
-            if (isOnBelt) GameManager.Instance.ResourceExitTile(this, tile);
+            if (isOnBelt) ExitConveyPath();
+            if (isInInventory) ExitInventory();
             Destroy(gameObject);
         }
     }

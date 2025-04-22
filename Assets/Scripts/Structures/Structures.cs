@@ -4,6 +4,8 @@ using Signals;
 using Newtonsoft.Json;
 using Inventories;
 using System.Data;
+using System;
+using NUnit.Framework;
 
 namespace Structures
 {
@@ -24,6 +26,9 @@ namespace Structures
             }
             set => _id = value;
         }
+
+        public virtual string TypeName => GetType().ToString();
+
         public bool ShouldInstantiateOnLoad() => true;
 
         public virtual string GetStateJson()
@@ -561,13 +566,13 @@ namespace Structures
 
         public void ResourceEnter(ConveyedResource resource)
         {
-            if (resources.Contains(resource)) throw new System.Exception("Resource already on conveyor belt.");
+            if (resources.Contains(resource)) throw new Exception("Resource already on conveyor belt.");
             resources.Add(resource);
         }
 
         public void ResourceExit(ConveyedResource resource)
         {
-            if (!resources.Contains(resource)) throw new System.Exception("Resource not on conveyor belt.");
+            if (!resources.Contains(resource)) throw new Exception("Resource not on conveyor belt.");
             resources.Remove(resource);
         }
 
@@ -712,5 +717,187 @@ namespace Structures
 
         public virtual void OnResourceEnter(ConveyedResource resource) { }
         public virtual void OnResourceExit(ConveyedResource resource) { }
+    }
+
+    public class Machine : Actuator
+    {
+        [SerializeField] private GameObject[] inputFunnels; // transform.position should round to the conveyor belt it is connected to
+        [SerializeField] private GameObject[] outputFunnels; // transform.position should round to the conveyor belt it is connected to
+        [SerializeField] private ulong funnelSpeedInTicks = 2;
+        [SerializeField] protected int[] numberOfInputs = { 1 };
+        [SerializeField] protected int[] numberOfOutputs = { 1 };
+
+        public bool isProcessing = false;
+        public ConveyedResource[][] inputResources;
+        public ConveyedResource[][] outputResources;
+
+        public virtual void Awake()
+        {
+            inputResources = new ConveyedResource[numberOfInputs.Length][];
+            outputResources = new ConveyedResource[numberOfOutputs.Length][];
+            for (int i = 0; i < numberOfInputs.Length; i++) inputResources[i] = new ConveyedResource[numberOfInputs[i]];
+            for (int i = 0; i < numberOfOutputs.Length; i++) outputResources[i] = new ConveyedResource[numberOfOutputs[i]];
+            if (inputFunnels.Length != numberOfInputs.Length) throw new Exception("Number of input funnels does not match number of input channels.");
+            if (outputFunnels.Length != numberOfOutputs.Length) throw new Exception("Number of output funnels does not match number of output channels.");
+        }
+
+        public override string GetStateJson()
+        {
+            CombinedState combinedState = new()
+            {
+                baseState = base.GetStateJson(),
+                inheritedState = JsonConvert.SerializeObject((
+                    isProcessing,
+                    Array.ConvertAll(inputResources, arr => Array.ConvertAll(arr, r => r == null ? -1 : r.ID)),
+                    Array.ConvertAll(outputResources, arr => Array.ConvertAll(arr, r => r == null ? -1 : r.ID))
+                ))
+            };
+            return JsonConvert.SerializeObject(combinedState);
+        }
+
+        public override void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+        {
+            var combinedState = JsonConvert.DeserializeObject<CombinedState>(stateJson);
+            base.RestoreStateJson(combinedState.baseState, idLookup);
+            var state = JsonConvert.DeserializeObject<(
+                bool,
+                int[][],
+                int[][]
+            )>(combinedState.inheritedState);
+
+            isProcessing = state.Item1;
+            for (int i = 0; i < inputResources.Length; i++)
+            {
+                inputResources[i] = new ConveyedResource[state.Item2[i].Length];
+                for (int j = 0; j < state.Item2[i].Length; j++)
+                    if (state.Item2[i][j] != -1) inputResources[i][j] = (ConveyedResource)idLookup[state.Item2[i][j]];
+            }
+            for (int i = 0; i < outputResources.Length; i++)
+            {
+                outputResources[i] = new ConveyedResource[state.Item3[i].Length];
+                for (int j = 0; j < state.Item3[i].Length; j++)
+                    if (state.Item3[i][j] != -1) outputResources[i][j] = (ConveyedResource)idLookup[state.Item3[i][j]];
+            }
+        }
+
+        protected override void WriteActuator(float[] inputSignals)
+        {
+            isProcessing = inputSignals[0] > 0;
+        }
+
+        public void Process()
+        {
+            if (GameManager.Instance.tick % funnelSpeedInTicks == 0) OutputToConveyorBelts();
+            if (isProcessing) ProcessMachine();
+            if (GameManager.Instance.tick % funnelSpeedInTicks == 0) InputFromConveyorBelts();
+        }
+
+        public int TryOutputResources(int channel, List<ConveyedResource> outputResources) // modifies the outputResources list
+        {
+            int successCount = 0;
+            for (int i = 0; i < numberOfOutputs[channel]; i++)
+            {
+                if (outputResources.Count == 0) break;
+                if (this.outputResources[channel][i] != null) continue;
+                this.outputResources[channel][i] = outputResources[0];
+                outputResources.RemoveAt(0);
+                successCount++;
+            }
+            return successCount;
+        }
+
+        public void InputFromConveyorBelts()
+        {
+            for (int channel = 0; channel < inputFunnels.Length; channel++)
+            {
+                for (int i = 0; i < numberOfInputs[channel]; i++)
+                {
+                    if (inputResources[channel][i] != null) continue;
+
+                    Vector2Int funnelTile = GameManager.Vector3ToTile(inputFunnels[channel].transform.position);
+                    List<ConveyedResource> funnelResources = GameManager.Instance.GetTileResources(funnelTile);
+                    if (funnelResources == null)
+                    {
+                        // no conveyor belt under the funnel, disable it
+                        inputFunnels[channel].SetActive(false);
+                        break;
+                    }
+                    else
+                    {
+                        // conveyor belt under the funnel, enable it
+                        inputFunnels[channel].SetActive(true);
+                    }
+                    if (funnelResources.Count == 0) break;
+                    ConveyedResource resourceToPickup = funnelResources[0]; // FIFO
+                    resourceToPickup.ExitConveyPath();
+                    inputResources[channel][i] = resourceToPickup;
+                    resourceToPickup.EnterInventory();
+                    resourceToPickup.transform.position = transform.position;
+
+                    break; // only pick one resource at a time
+                }
+            }
+        }
+
+        public void OutputToConveyorBelts()
+        {
+            for (int channel = 0; channel < outputFunnels.Length; channel++)
+            {
+                for (int i = 0; i < numberOfOutputs[channel]; i++)
+                {
+                    if (outputResources[channel][i] == null) continue;
+
+                    Vector2Int funnelTile = GameManager.Vector3ToTile(outputFunnels[channel].transform.position);
+                    if (GameManager.Instance.GetTileResources(funnelTile) == null)
+                    {
+                        // no conveyor belt under the funnel, disable it
+                        outputFunnels[channel].SetActive(false);
+                        break;
+                    }
+                    else
+                    {
+                        // conveyor belt under the funnel, enable it
+                        outputFunnels[channel].SetActive(true);
+                    }
+                    if (outputResources[channel][i].TryEnterConveyPath(funnelTile))
+                    {
+                        outputResources[channel][i].ExitInventory();
+                        outputResources[channel][i] = null;
+                    }
+
+                    break; // only output one resource at a time
+                }
+            }
+        }
+
+        public void MoveInputResourcesToOutput()
+        {
+            for (int inputChannel = 0; inputChannel < inputFunnels.Length; inputChannel++)
+            {
+                for (int i = 0; i < numberOfInputs[inputChannel]; i++)
+                {
+                    if (inputResources[inputChannel][i] == null) continue;
+
+                    for (int outputChannel = 0; outputChannel < outputFunnels.Length; outputChannel++)
+                    {
+                        for (int j = 0; j < numberOfOutputs[outputChannel]; j++)
+                        {
+                            if (outputResources[outputChannel][j] != null) continue;
+                            outputResources[outputChannel][j] = inputResources[inputChannel][i];
+                            inputResources[inputChannel][i] = null;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        public virtual void DropInventory()
+        {
+            foreach (ConveyedResource[] resources in inputResources) foreach (ConveyedResource resource in resources) if (resource != null) resource.ExitInventory();
+            foreach (ConveyedResource[] resources in outputResources) foreach (ConveyedResource resource in resources) if (resource != null) resource.ExitInventory();
+        }
+
+        public virtual void ProcessMachine() { }
     }
 }

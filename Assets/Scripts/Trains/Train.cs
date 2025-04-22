@@ -38,6 +38,9 @@ public class Train : MonoBehaviour, ISavable
         }
         set => _id = value;
     }
+
+    public string TypeName => GetType().ToString();
+
     public bool ShouldInstantiateOnLoad() => true;
 
     public string GetStateJson()
@@ -119,7 +122,7 @@ public class Train : MonoBehaviour, ISavable
         List<Vector2Int> newOrientations = GameManager.Instance.GetTrainOrientations(newTile);
 
         // if the new tile is compatible with the current head orientation, set the new head orientation and add the new tile and half segments
-        if (newOrientations.Contains(headOrientation))
+        if (newOrientations != null && newOrientations.Contains(headOrientation))
         {
             // get the new head orientation
             headOrientation = GameManager.Instance.GetNextTrainOrientation(newTile, headOrientation);
@@ -265,6 +268,9 @@ public class Cart : MonoBehaviour, ISavable
         }
         set => _id = value;
     }
+
+    public string TypeName => GetType().ToString();
+
     public bool ShouldInstantiateOnLoad() => true;
 
     public virtual string GetStateJson()

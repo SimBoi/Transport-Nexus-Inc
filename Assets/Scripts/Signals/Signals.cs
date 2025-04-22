@@ -168,6 +168,9 @@ namespace Signals
             }
             set => _id = value;
         }
+
+        public string TypeName => GetType().ToString();
+
         public bool ShouldInstantiateOnLoad() => false;
 
         public string GetStateJson()

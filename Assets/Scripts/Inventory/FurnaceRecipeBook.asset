@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: efcc2172fb628e347a7ee88d1241fe6a, type: 3}
+  m_Name: FurnaceRecipeBook
+  m_EditorClassIdentifier: 
+  list:
+  - ingredients:
+    - materialType: 0
+      amount: 1
+      channel: 0
+    - materialType: 1
+      amount: 1
+      channel: 0
+    products:
+    - materialType: 1
+      amount: 3
+      channel: 0
+    processingTicks: 4
+  - ingredients:
+    - materialType: 0
+      amount: 2
+      channel: 0
+    products:
+    - materialType: 1
+      amount: 1
+      channel: 0
+    processingTicks: 300

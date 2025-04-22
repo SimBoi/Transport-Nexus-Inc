@@ -10,6 +10,12 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
+    // Prefab registries
+    public List<GameObject> savablePrefabs;
+    public Dictionary<string, GameObject> savablesPrefabRegistry = new();
+    public Dictionary<Materials, GameObject> materialsPrefabRegistry = new();
+
+    public ulong tick = 0;
     [HideInInspector] public int[] materials = new int[Enum.GetValues(typeof(Materials)).Length];
 
     public PortNetworkGraph signalNetworkGraph { get; private set; } = new();
@@ -21,6 +27,7 @@ public class GameManager : MonoBehaviour
     private Dictionary<Vector2Int, SplitterPort> _splitterPorts = new();
     private Dictionary<Vector2Int, Structure> _rails = new();
     private Dictionary<Vector2Int, Structure> _conveyors = new();
+    private Dictionary<Vector2Int, Machine> _machines = new();
 
     private List<Train> _trains = new();
 
@@ -46,11 +53,22 @@ public class GameManager : MonoBehaviour
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+
+        // Build the registry using the prefab's component type name as key
+        foreach (GameObject prefab in savablePrefabs)
+        {
+            ISavable savable = prefab.GetComponent<ISavable>();
+            if (savable != null)
+            {
+                savablesPrefabRegistry[savable.GetType().ToString()] = prefab;
+            }
+        }
     }
 
     void FixedUpdate()
     {
         Tick();
+        tick++;
     }
 
     private void Tick()
@@ -69,10 +87,16 @@ public class GameManager : MonoBehaviour
 
         // Step 5: Write all actuators
         foreach (Actuator actuator in _actuators.Values) actuator.Write();
+
+        // Step 6: Process all machines
+        foreach (Machine machine in _machines.Values) machine.Process();
     }
 
     public void SaveState(SaveData saveData)
     {
+        // save tick
+        saveData.tick = tick;
+
         // save materials
         saveData.materials = materials;
 
@@ -93,6 +117,9 @@ public class GameManager : MonoBehaviour
 
     public void RestoreState(SaveData saveData, Dictionary<int, ISavable> idLookup)
     {
+        // restore tick
+        tick = saveData.tick;
+
         // restore materials
         materials = saveData.materials;
 
@@ -106,7 +133,8 @@ public class GameManager : MonoBehaviour
             else if (structure is Actuator actuator) _actuators.Add(tile, actuator);
             else if (structure is SplitterPort splitterPort) _splitterPorts.Add(tile, splitterPort);
             if (structure is DynamicRail || structure is SensorRail || structure is ActuatorRail) _rails.Add(tile, structure);
-            if (structure is DynamicConveyorBelt || structure is SensorConveyorBelt || structure is ActuatorConveyorBelt) _conveyors.Add(tile, structure);
+            else if (structure is DynamicConveyorBelt || structure is SensorConveyorBelt || structure is ActuatorConveyorBelt) _conveyors.Add(tile, structure);
+            else if (structure is Machine machine) _machines.Add(tile, machine);
         }
 
         // restore signal network graph and wires
@@ -200,7 +228,16 @@ public class GameManager : MonoBehaviour
         instantiatedStructure.prefab = structurePrefab;
         for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _tiles.Add(tile + x * relativeRight + y * relativeUp, (orientation, instantiatedStructure));
 
-        if (instantiatedStructure is DynamicRail dynamicRail)
+        if (instantiatedStructure is Machine machine)
+        {
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
+                {
+                    _machines.Add(tile + x * relativeRight + y * relativeUp, machine);
+                    _actuators.Add(tile + x * relativeRight + y * relativeUp, machine);
+                }
+            machine.Initialize(signalNetworkGraph);
+        }
+        else if (instantiatedStructure is DynamicRail dynamicRail)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _rails.Add(tile + x * relativeRight + y * relativeUp, dynamicRail);
             ConnectRail(tile);
@@ -208,20 +245,20 @@ public class GameManager : MonoBehaviour
         else if (instantiatedStructure is SensorRail sensorRail)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
-            {
-                _rails.Add(tile + x * relativeRight + y * relativeUp, sensorRail);
-                _sensors.Add(tile + x * relativeRight + y * relativeUp, sensorRail);
-            }
+                {
+                    _rails.Add(tile + x * relativeRight + y * relativeUp, sensorRail);
+                    _sensors.Add(tile + x * relativeRight + y * relativeUp, sensorRail);
+                }
             sensorRail.Initialize(signalNetworkGraph);
             ConnectRail(tile);
         }
         else if (instantiatedStructure is ActuatorRail actuatorRail)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
-            {
-                _rails.Add(tile + x * relativeRight + y * relativeUp, actuatorRail);
-                _actuators.Add(tile + x * relativeRight + y * relativeUp, actuatorRail);
-            }
+                {
+                    _rails.Add(tile + x * relativeRight + y * relativeUp, actuatorRail);
+                    _actuators.Add(tile + x * relativeRight + y * relativeUp, actuatorRail);
+                }
             actuatorRail.Initialize(signalNetworkGraph);
             ConnectRail(tile);
         }
@@ -233,20 +270,20 @@ public class GameManager : MonoBehaviour
         else if (instantiatedStructure is SensorConveyorBelt sensorConveyor)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
-            {
-                _conveyors.Add(tile + x * relativeRight + y * relativeUp, sensorConveyor);
-                _sensors.Add(tile + x * relativeRight + y * relativeUp, sensorConveyor);
-            }
+                {
+                    _conveyors.Add(tile + x * relativeRight + y * relativeUp, sensorConveyor);
+                    _sensors.Add(tile + x * relativeRight + y * relativeUp, sensorConveyor);
+                }
             sensorConveyor.Initialize(signalNetworkGraph);
             ConnectConveyor(tile);
         }
         else if (instantiatedStructure is ActuatorConveyorBelt actuatorConveyor)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
-            {
-                _conveyors.Add(tile + x * relativeRight + y * relativeUp, actuatorConveyor);
-                _actuators.Add(tile + x * relativeRight + y * relativeUp, actuatorConveyor);
-            }
+                {
+                    _conveyors.Add(tile + x * relativeRight + y * relativeUp, actuatorConveyor);
+                    _actuators.Add(tile + x * relativeRight + y * relativeUp, actuatorConveyor);
+                }
             actuatorConveyor.Initialize(signalNetworkGraph);
             ConnectConveyor(tile);
         }
@@ -329,7 +366,18 @@ public class GameManager : MonoBehaviour
         Vector2Int relativeUp = _tiles[tile].orientation;
         Vector2Int relativeRight = new Vector2Int(relativeUp.y, -relativeUp.x);
 
-        if (_rails.ContainsKey(tile))
+        if (_machines.ContainsKey(tile))
+        {
+            Machine machine = _machines[tile];
+            machine.DropInventory();
+            foreach (Port inputPort in _actuators[tile].inputPorts) inputPort.RemoveFromNetwork();
+            for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
+                {
+                    _machines.Remove(tile + x * relativeRight + y * relativeUp);
+                    _actuators.Remove(tile + x * relativeRight + y * relativeUp);
+                }
+        }
+        else if (_rails.ContainsKey(tile))
         {
             if (_rails[tile] is DynamicRail dynamicRail && dynamicRail.trains.Count > 0) return false;
             if (_rails[tile] is SensorRail sensorRail && sensorRail.trains.Count > 0) return false;
@@ -352,7 +400,7 @@ public class GameManager : MonoBehaviour
         else if (_conveyors.ContainsKey(tile))
         {
             List<ConveyedResource> resources = GetTileResources(tile);
-            foreach (ConveyedResource resource in resources) resource.ExitConveyPath();
+            while (resources.Count > 0) resources[0].ExitConveyPath();
 
             if (_sensors.ContainsKey(tile))
             {
@@ -670,6 +718,7 @@ public class GameManager : MonoBehaviour
         if (portUI)
         {
             HighlightDisconnectedPorts(focusPosition, excludePorts: excludePorts);
+            // TODO: "delete" button for ports that are already connected
         }
         if (buildingUI)
         {

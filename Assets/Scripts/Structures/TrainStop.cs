@@ -28,6 +28,7 @@ public class TrainStop : ActuatorRail
     protected override void OnTrainEnter(Train train)
     {
         if (stopTrain) train.Brake(2);
+        else train.Accelerate();
     }
 
     protected override void WriteActuator(float[] inputSignals)
@@ -38,11 +39,8 @@ public class TrainStop : ActuatorRail
         }
         else
         {
+            if (stopTrain) foreach (Train train in trains) train.Accelerate();
             stopTrain = false;
-            foreach (Train train in trains)
-            {
-                train.Accelerate();
-            }
         }
     }
 }

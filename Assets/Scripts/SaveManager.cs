@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 public interface ISavable
 {
     int ID { get; set; }
+    string TypeName { get; }
     bool ShouldInstantiateOnLoad();
     string GetStateJson();
     void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup);
@@ -50,6 +51,7 @@ public class SaveData
     public List<SavebleEntry> savables = new List<SavebleEntry>();
 
     // GameManger state
+    public ulong tick;
     public int[] materials;
     public List<(Vector2Int tile, Vector2Int orientation, int structureId)> tiles = new();
     public List<(int port1Id, int port2Id)> portConnections = new();
@@ -65,25 +67,10 @@ public class SaveManager : MonoBehaviour
 
     public string SaveFileName = "save.json";
 
-    // A registry that maps type names to prefabs
-    // Should be populated in the editor
-    public List<GameObject> savablePrefabs;
-    private Dictionary<string, GameObject> prefabRegistry = new();
-
     private void Awake()
     {
         if (Instance != null) Destroy(gameObject);
         Instance = this;
-
-        // Build the registry using the prefab's component type name as key
-        foreach (GameObject prefab in savablePrefabs)
-        {
-            ISavable savable = prefab.GetComponent<ISavable>();
-            if (savable != null)
-            {
-                prefabRegistry[savable.GetType().ToString()] = prefab;
-            }
-        }
     }
 
     public void SaveGame()
@@ -113,7 +100,7 @@ public class SaveManager : MonoBehaviour
                     rotation = new float[] { ((MonoBehaviour)savable).transform.rotation.x, ((MonoBehaviour)savable).transform.rotation.y, ((MonoBehaviour)savable).transform.rotation.z, ((MonoBehaviour)savable).transform.rotation.w },
                     scale = new float[] { ((MonoBehaviour)savable).transform.localScale.x, ((MonoBehaviour)savable).transform.localScale.y, ((MonoBehaviour)savable).transform.localScale.z }
                 } : new SerializableTransform(),
-                type = savable.GetType().ToString(),
+                type = savable.TypeName,
                 shouldInstantiateOnLoad = savable.ShouldInstantiateOnLoad(),
                 stateJson = savable.GetStateJson()
             };
@@ -139,14 +126,14 @@ public class SaveManager : MonoBehaviour
         {
             if (!entry.shouldInstantiateOnLoad) continue;
 
-            GameObject obj = Instantiate(prefabRegistry[entry.type], entry.transform.GetPosition(), entry.transform.GetRotation());
+            GameObject obj = Instantiate(PrefabRegistries.Instance.savables[entry.type], entry.transform.GetPosition(), entry.transform.GetRotation());
             obj.transform.localScale = entry.transform.GetScale();
             idLookup[entry.id] = obj.GetComponent<ISavable>();
             idLookup[entry.id].ID = entry.id;
 
             // save the prefab for structures
             var structure = obj.GetComponent<Structures.Structure>();
-            if (structure != null) structure.prefab = prefabRegistry[entry.type];
+            if (structure != null) structure.prefab = PrefabRegistries.Instance.savables[entry.type];
         }
 
         // Phase 2: Non instantiated ISavable objects, custom logic should be implemented here for each type
