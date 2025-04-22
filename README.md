@@ -6,6 +6,6 @@ Feature roadmap:
 3. Trains and rails network - Done!
 4. Serialization/deserialization - Done!
 5. Items and Conveyor belts - Done!
-6. Machines and funnels
+6. Machines and funnels - Done!
 7. Code documentation
 8. Cargo carts
