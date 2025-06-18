@@ -134,8 +134,8 @@ public class RecipeMachine : Machine
     {
         base.DropInventory();
 
-        foreach (ConveyedResource r in ingredientResources) if (r != null) r.ExitInventory();
-        foreach (List<ConveyedResource> channel in producedResources) foreach (ConveyedResource r in channel) if (r != null) r.ExitInventory();
+        foreach (ConveyedResource r in ingredientResources) if (r != null) r.ExitInventory(transform.position);
+        foreach (List<ConveyedResource> channel in producedResources) foreach (ConveyedResource r in channel) if (r != null) r.ExitInventory(transform.position);
 
         ingredientResources.Clear();
         foreach (List<ConveyedResource> channel in producedResources) channel.Clear();

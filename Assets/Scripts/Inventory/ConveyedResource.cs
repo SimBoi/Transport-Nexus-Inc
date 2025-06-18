@@ -55,6 +55,8 @@ namespace Inventories
             exitOrientation = new Vector2Int(state.Item4.Item1, state.Item4.Item2);
             isOnBelt = state.Item5;
             isInInventory = state.Item6;
+
+            model.SetActive(!isInInventory);
         }
 
         public void InitializeConveyPath(Vector2Int initialTile, Vector2Int initialOrientation, Vector2Int initialExitOrientation)
@@ -91,8 +93,9 @@ namespace Inventories
             isInInventory = true;
         }
 
-        public void ExitInventory()
+        public void ExitInventory(Vector3? dropPossition = null)
         {
+            if (dropPossition != null) transform.position = (Vector3)dropPossition;
             model.SetActive(true);
             isInInventory = false;
         }

@@ -894,8 +894,8 @@ namespace Structures
 
         public virtual void DropInventory()
         {
-            foreach (ConveyedResource[] resources in inputResources) foreach (ConveyedResource resource in resources) if (resource != null) resource.ExitInventory();
-            foreach (ConveyedResource[] resources in outputResources) foreach (ConveyedResource resource in resources) if (resource != null) resource.ExitInventory();
+            foreach (ConveyedResource[] resources in inputResources) foreach (ConveyedResource resource in resources) if (resource != null) resource.ExitInventory(transform.position);
+            foreach (ConveyedResource[] resources in outputResources) foreach (ConveyedResource resource in resources) if (resource != null) resource.ExitInventory(transform.position);
         }
 
         public virtual void ProcessMachine() { }
