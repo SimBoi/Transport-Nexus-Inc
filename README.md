@@ -89,7 +89,7 @@ The inventory system manages resources, crafting, and inventory UI. It ensures t
 #### Key Classes
 - **ConveyedResource**:
   - Represents resources on conveyor belts or in inventories.
-  - Handles movement, collisions, and state serialization.
+  - Handles movement and collisions.
   - Key Methods:
     - `Convey`: Moves the resource along the conveyor belt.
     - `EnterInventory`: Adds the resource to an inventory.
@@ -147,10 +147,7 @@ The structures system manages in-game objects like conveyor belts, rails, machin
 - **Structure**:
   - Base class for all structures.
   - Provides properties like `tile`, `orientation`, and `size`.
-  - Handles serialization for saving/loading state.
   - Key Methods:
-    - `GetStateJson`: Serializes the structure's state.
-    - `RestoreStateJson`: Restores the structure's state from a save file.
     - `RotateClockwise`: Calculates the new orientation and tile position when the structure is rotated.
 
 - **DynamicConveyorBelt**:
@@ -203,7 +200,7 @@ GameManager.Instance.AddStructure(tile, orientation, structurePrefab);
 (Vector2Int newTile, Vector2Int newOrientation) = Structure.RotateClockwise(tile, orientation, size);
 ```
 - Calculates the new tile and orientation for the structure.
-- TODO: explain why we return newTile (multi-tile structures support)
+- **Why `newTile` is returned**: For multi-tile structures (where `size > 1`), the `tile` property always refers to the bottom-left corner of the structure relative to its current orientation. When a structure rotates, the position of its bottom-left corner changes. For example, a 2x2 structure facing up has its reference tile at one corner, but when rotated 90° clockwise, the bottom-left corner is now at a different grid position. The formula `newTile = tile + (size - 1) * orientation` computes this shift, ensuring the structure visually rotates around its center rather than its corner.
 
 ##### Processing Resources in a Machine
 ```csharp
@@ -224,7 +221,35 @@ trainStop.OnTrainEnter(train);
 
 #### Overview
 The trains system manages train movement, pathfinding, and cart management. It ensures that trains follow rails and interact with stations.
-TODO: explain how the pathfinding system works, what happens when entering/exiting tiles, explain segments, and why path half segments exist (to support turns), explain how the train determines the orientation of the path when it enters a tile
+
+#### Pathfinding and Movement Mechanics
+
+##### Tile-Based Path Tracking
+Trains maintain a list of tiles (`tilesPath`) representing the 2D grid positions the train currently occupies. The head of the train is always on the last tile in this list. As the train moves forward, new tiles are added to the end and old tiles are removed from the front.
+
+##### Path Half Segments
+The `pathHalfSegments` list contains 3D points that define the train's path with sub-tile precision. Each tile contributes **two half segments** to the path:
+1. A point at the **center of the tile** (`new Vector3(tile.x, 0, tile.y)`)
+2. A point at the **exit edge** of the tile (`tile + halfOrientation`)
+
+**Why half segments exist**: Half segments enable turns. When a train enters a curved rail, the path goes from the entry edge → tile center → exit edge. The `headInterpolation` value tracks the train's position along these segments, where each half segment represents 1 unit of interpolation distance.
+
+##### Entering a Tile
+When the train's `headInterpolation` exceeds the current path length, the `AdvancePath` method is called:
+1. **Check compatibility**: The game queries `GetTrainOrientations(newTile)` to get valid entry directions for the new tile
+2. **Validate entry**: If the train's current `headOrientation` is in the valid orientations list, entry is allowed
+3. **Determine exit direction**: `GetNextTrainOrientation(newTile, headOrientation)` returns the direction the train will exit the tile. For straight rails, this is the opposite of entry. For curved rails or intersections, it may differ
+4. **Update path**: Two new half segments are added (tile center and exit point), and `GameManager.TrainEnterTile` notifies the rail structure
+
+##### Exiting a Tile
+When a train fully leaves a tile (the tail passes the exit), `StepOutOfTile` is called:
+1. The tile is removed from `tilesPath`
+2. The corresponding two half segments are removed from `pathHalfSegments`
+3. `headInterpolation` is decremented by 2 (since two half segments were removed)
+4. `GameManager.TrainExitTile` notifies the rail structure
+
+##### Cart Positioning
+Each cart's position is calculated by interpolating along the path half segments. The `InterpolateCart` method finds points 0.5 units ahead and behind the cart's center interpolation value, then positions the cart between them with appropriate rotation. This ensures carts smoothly follow curves.
 
 #### Key Classes
 - **Train**:
@@ -237,9 +262,7 @@ TODO: explain how the pathfinding system works, what happens when entering/exiti
 
 - **Cart**:
   - Represents individual train components.
-  - Includes serialization for saving/loading state.
-  - Key Methods:
-    - `RestoreStateJson`: Restores the cart's state from a save file.
+  - Handles collision detection and triggers train crashes.
 
 - **DynamicRail**:
   - Handles train entry/exit and manages orientations.
@@ -279,7 +302,29 @@ train.Crash();
 
 #### Overview
 The signals system manages signal propagation and network management. It ensures that signals are transmitted between connected ports.
-TODO: introduce the signal network graph, explain why it exists (to handle signal connections efficiently), and how it does it
+
+#### Signal Network Graph
+
+##### What It Is
+The `PortNetworkGraph` is an undirected graph data structure that tracks all signal connections in the game. Ports are vertices, and wires connecting them are edges. This graph is the backbone of the signal system, determining which ports share signal values.
+
+##### Why It Exists
+Without a network graph, determining signal connectivity would require traversing wires every time a signal is read or written—an O(n) operation per access. The graph enables **channel-based signal sharing**: all ports in a connected subgraph share a single `Channel` object. Writing to any port in the network updates the shared channel, and reading from any port returns the same value. This reduces signal operations to O(1).
+
+##### How It Works
+
+**Channel Assignment with BFS**: When wires are connected or disconnected, the graph uses Breadth-First Search (`AssignSignalChannelBFS`) to propagate channel assignments:
+- **Connecting two unconnected ports**: A new `Channel` is created and assigned to both ports via BFS
+- **Connecting to an existing network**: The new port inherits the existing network's channel
+- **Disconnecting a wire**: If the network splits into two separate subgraphs, one subgraph gets a new channel while the other keeps the original
+
+**Signal Flow Per Tick**:
+1. `ResetSignalChannels()`: All channels are reset to 0 at the start of each tick
+2. Sensors write values to their output ports (which write to their shared channels)
+3. Processors read from input ports, compute results, and write to output ports
+4. Actuators read from input ports to determine their behavior
+
+**Channel Semantics**: When multiple sources write to the same channel in a single tick, the channel takes the **maximum** value (`Mathf.Max`). This allows multiple sensors or processors to contribute to a shared signal line, with the strongest signal winning.
 
 #### Key Classes
 - **Port**:
@@ -369,7 +414,90 @@ port.Write(signalValue);
 
 ---
 
-TODO: remove mentions of saving/loading the game state in the above sections and create a section here dedicated to explaing how the save/load game state system works
+## Save/Load System Guide
+
+### Overview
+The save/load system enables game persistence by serializing all game objects and their states to JSON. It uses a phased approach to handle complex object relationships and dependencies.
+
+### Key Components
+
+#### ISavable Interface
+All persistent objects implement the `ISavable` interface:
+```csharp
+public interface ISavable
+{
+    int ID { get; set; }                    // Unique identifier for cross-references
+    string TypeName { get; }                 // Type name for prefab lookup during load
+    bool ShouldInstantiateOnLoad();          // Whether to create a new GameObject on load
+    string GetStateJson();                   // Serialize object state to JSON
+    void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup);  // Restore state from JSON
+}
+```
+
+**Instantiable vs Non-Instantiable Objects**:
+- **Instantiable** (`ShouldInstantiateOnLoad() = true`): Objects like structures, trains, and resources that need a new GameObject created on load
+- **Non-Instantiable** (`ShouldInstantiateOnLoad() = false`): Objects like `Port` (found as children of structures) and `Channel` (created programmatically) that are located or created through custom logic
+
+#### CombinedState Pattern
+For inheritance hierarchies, derived classes use `CombinedState` to serialize both base and derived state:
+```csharp
+CombinedState combinedState = new() {
+    baseState = base.GetStateJson(),
+    inheritedState = JsonConvert.SerializeObject(derivedFields)
+};
+```
+
+### Save Process
+
+1. **Collect ISavables**: Find all `MonoBehaviour` objects implementing `ISavable`, plus non-MonoBehaviour savables like `Channel`
+2. **Save GameManager State**: Serialize game-wide data (tick count, materials, tile mappings, port connections)
+3. **Serialize Each Object**: For each ISavable, create a `SavebleEntry` containing:
+   - Unique ID, given by the SaveManager
+   - Transform data (position, rotation, scale) for instantiable objects
+   - Type name for prefab lookup
+   - Custom state JSON from `GetStateJson()`
+4. **Write to File**: Save as formatted JSON to `Application.persistentDataPath`
+
+### Load Process (Four Phases)
+
+**Phase 1 - Instantiate Objects**:
+```csharp
+foreach (SavebleEntry entry in saveData.savables) {
+    if (!entry.shouldInstantiateOnLoad) continue;
+    GameObject obj = Instantiate(PrefabRegistries.Instance.savables[entry.type], ...);
+    idLookup[entry.id] = obj.GetComponent<ISavable>();
+}
+```
+Creates GameObjects for all instantiable savables using registered prefabs.
+
+**Phase 2 - Resolve Non-Instantiables**:
+- **Ports**: Located by name within their parent structure's hierarchy
+- **Channels**: Created as new objects (they have no GameObject)
+
+**Phase 3 - Restore GameManager State**:
+Rebuilds the game's tile mappings, signal network connections, and train registrations using the `idLookup` dictionary.
+
+**Phase 4 - Restore Object States**:
+```csharp
+foreach (SavebleEntry entry in saveData.savables) 
+    idLookup[entry.id].RestoreStateJson(entry.stateJson, idLookup);
+```
+Each object deserializes its state, using `idLookup` to resolve cross-references to other objects.
+
+### Cross-Reference Resolution
+Objects reference each other by ID rather than direct pointers. During save, references are converted to IDs:
+```csharp
+// In Train.GetStateJson()
+carts.ConvertAll(cart => cart.ID)
+```
+During load, IDs are resolved back to object references:
+```csharp
+// In Train.RestoreStateJson()
+carts = cartIds.ConvertAll(cartId => (Cart)idLookup[cartId]);
+```
+
+### Unique ID Generation
+`SaveManager.GenerateUniqueId()` provides monotonically increasing IDs. After loading, the ID generator is reset to one past the highest loaded ID to prevent collisions with new objects.
 
 ---
 
