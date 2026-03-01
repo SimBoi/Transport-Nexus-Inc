@@ -512,3 +512,7 @@ carts = cartIds.ConvertAll(cartId => (Cart)idLookup[cartId]);
 7. Code documentation
 8. Cargo carts
 9. Pickup/Drop items interactively
+
+## Bugs/Improvements
+
+- internal clocks for funnels instead of relying on global ticks

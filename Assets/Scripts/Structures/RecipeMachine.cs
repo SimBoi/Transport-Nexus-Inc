@@ -47,13 +47,13 @@ public class RecipeMachine : Machine
     {
         CombinedState combinedState = JsonConvert.DeserializeObject<CombinedState>(stateJson);
         base.RestoreStateJson(combinedState.baseState, idLookup);
-        var state = JsonConvert.DeserializeObject<((int, int), List<int>, List<List<int>>)>(combinedState.inheritedState);
-        currentRecipeIndex = state.Item1.Item1;
-        currentProcessingTicks = state.Item1.Item2;
-        ingredientResources = state.Item2.ConvertAll(id => idLookup[id] as ConveyedResource);
+        var state = JsonConvert.DeserializeObject<(int, int, List<int>, List<int>[])>(combinedState.inheritedState);
+        currentRecipeIndex = state.Item1;
+        currentProcessingTicks = state.Item2;
+        ingredientResources = state.Item3.ConvertAll(id => idLookup[id] as ConveyedResource);
         for (int i = 0; i < producedResources.Length; i++)
         {
-            producedResources[i] = state.Item3[i].ConvertAll(id => idLookup[id] as ConveyedResource);
+            producedResources[i] = state.Item4[i].ConvertAll(id => idLookup[id] as ConveyedResource);
         }
     }
 
