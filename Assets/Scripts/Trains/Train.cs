@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using NUnit.Framework;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Tilemaps;
 
 
 public class Train : MonoBehaviour, ISavable
@@ -197,6 +199,13 @@ public class Train : MonoBehaviour, ISavable
         {
             actualDeceleration = deceleration;
         }
+    }
+
+    public Cart GetCart(Vector2Int tile)
+    {
+        int tileIndex = tilesPath.IndexOf(tile);
+        int cartIndex = carts.Count - tileIndex;
+        return carts[cartIndex];
     }
 
     public bool AddCart(GameObject cartPrefab, int index = -1)

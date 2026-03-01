@@ -955,6 +955,36 @@ public class GameManager : MonoBehaviour
         else if (_rails[tile] is ActuatorRail actuatorRail) actuatorRail.TrainExit(train);
     }
 
+    public Cart GetCart(Vector2Int tile)
+    {
+        if (!_rails.ContainsKey(tile)) return null;
+
+        List<Train> trains;
+        if (_rails[tile] is DynamicRail dynamicRail) trains = dynamicRail.trains;
+        else if (_rails[tile] is SensorRail sensorRail) trains = sensorRail.trains;
+        else if (_rails[tile] is ActuatorRail actuatorRail) trains = actuatorRail.trains;
+        else return null;
+
+        List<Cart> carts = new(trains.Count);
+        foreach (Train train in trains) carts.Add(train.GetCart(tile));
+
+        Cart closestCart = null;
+        float closestDist = float.MaxValue;
+        foreach (Cart cart in carts)
+        {
+            if (cart == null) continue;
+
+            Vector2 cartPos = cart.transform.position;
+            float dist = Vector2.Distance(cart.transform.position, tile);
+            if (dist < closestDist)
+            {
+                closestCart = cart;
+                closestDist = dist;
+            }
+        }
+        return closestCart;
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////// Conveyors //////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
