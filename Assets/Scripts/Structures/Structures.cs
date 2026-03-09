@@ -731,6 +731,10 @@ namespace Structures
         public ConveyedResource[][] inputResources;
         public ConveyedResource[][] outputResources;
 
+        public event Action OnInput;
+        public event Action OnProcess;
+        public event Action OnOutput;
+
         public virtual void Awake()
         {
             inputResources = new ConveyedResource[numberOfInputs.Length][];
@@ -788,8 +792,11 @@ namespace Structures
         public void Process()
         {
             if (GameManager.Instance.tick % funnelSpeedInTicks == 0) OutputToConveyorBelts();
+            OnOutput?.Invoke();
             if (isProcessing) ProcessMachine();
+            OnProcess?.Invoke();
             if (GameManager.Instance.tick % funnelSpeedInTicks == 0) InputFromConveyorBelts();
+            OnInput?.Invoke();
         }
 
         public int TryOutputResources(int channel, List<ConveyedResource> outputResources) // modifies the outputResources list

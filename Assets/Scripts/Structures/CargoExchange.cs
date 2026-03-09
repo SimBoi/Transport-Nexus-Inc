@@ -13,6 +13,13 @@ public class CargoExchange : Machine
 
     public override string TypeName => GetType().ToString() + speedTicks;
 
+    public override void Awake()
+    {
+        base.Awake();
+        OnInput += InputFromStructures;
+        OnOutput += OutputToStructures;
+    }
+
     public override string GetStateJson()
     {
         CombinedState combinedState = new()
@@ -42,5 +49,15 @@ public class CargoExchange : Machine
             inputResources[0][0] = null;
             currentProcessingTicks = 0;
         }
+    }
+
+    public void InputFromStructures()
+    {
+        Debug.Log("try input");
+    }
+
+    public void OutputToStructures()
+    {
+        Debug.Log("try output");
     }
 }
