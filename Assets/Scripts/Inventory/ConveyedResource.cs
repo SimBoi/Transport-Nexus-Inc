@@ -70,21 +70,21 @@ namespace Inventories
         public bool TryEnterConveyPath(Vector2Int tile)
         {
             // check if a conveyor belt has been placed under the resource
-            List<ConveyedResource> resourcesOnTile = GameManager.Instance.GetTileResources(tile);
+            List<ConveyedResource> resourcesOnTile = GameManager.Instance.GetConveyorResources(tile);
             if (resourcesOnTile == null) return false;
 
             // check if the resource will overlap with other resources on the center of the tile
             if (IsOverlappingWith(GameManager.TileToVector3(tile), resourcesOnTile)) return false;
 
             InitializeConveyPath(tile, GameManager.Instance.GetTileOrientation(tile), GameManager.Instance.GetNextConveyorExitOrientation(tile, this));
-            GameManager.Instance.ResourceEnterTile(this, tile);
+            GameManager.Instance.ResourceEnterConveyor(this, tile);
             return true;
         }
 
         public void ExitConveyPath()
         {
             isOnBelt = false;
-            GameManager.Instance.ResourceExitTile(this, tile);
+            GameManager.Instance.ResourceExitConveyor(this, tile);
         }
 
         public void EnterInventory()
@@ -152,7 +152,7 @@ namespace Inventories
         {
             Vector2Int newTile = tile + newTileDir;
             if (newTileDir == Vector2Int.zero ||
-                GameManager.Instance.GetTileResources(newTile) == null ||
+                GameManager.Instance.GetConveyorResources(newTile) == null ||
                 GameManager.Instance.GetTileOrientation(newTile) != exitOrientation)
             {
                 interpolation = 1.99f;
@@ -168,8 +168,8 @@ namespace Inventories
             pathHalfSegments.RemoveAt(0);
             pathHalfSegments.RemoveAt(0);
 
-            GameManager.Instance.ResourceEnterTile(this, newTile);
-            GameManager.Instance.ResourceExitTile(this, tile);
+            GameManager.Instance.ResourceEnterConveyor(this, newTile);
+            GameManager.Instance.ResourceExitConveyor(this, tile);
             tile = newTile;
             interpolation -= 2;
         }

@@ -533,7 +533,7 @@ namespace Structures
         public void Update()
         {
             Vector2Int nextTile = tile + exitOrientation;
-            List<ConveyedResource> nextTileResources = GameManager.Instance.GetTileResources(nextTile);
+            List<ConveyedResource> nextTileResources = GameManager.Instance.GetConveyorResources(nextTile);
             for (int i = resources.Count - 1; i >= 0; i--) resources[i].Convey(speed, resources, nextTileResources);
         }
 
@@ -616,7 +616,7 @@ namespace Structures
             for (int i = resources.Count - 1; i >= 0; i--)
             {
                 Vector2Int nextTile = tile + GetNextExitOrientation(resources[i]);
-                List<ConveyedResource> nextTileResources = GameManager.Instance.GetTileResources(nextTile);
+                List<ConveyedResource> nextTileResources = GameManager.Instance.GetConveyorResources(nextTile);
                 resources[i].Convey(speed, resources, nextTileResources);
             }
         }
@@ -686,7 +686,7 @@ namespace Structures
             for (int i = resources.Count - 1; i >= 0; i--)
             {
                 Vector2Int nextTile = tile + GetNextExitOrientation(resources[i]);
-                List<ConveyedResource> nextTileResources = GameManager.Instance.GetTileResources(nextTile);
+                List<ConveyedResource> nextTileResources = GameManager.Instance.GetConveyorResources(nextTile);
                 resources[i].Convey(speed, resources, nextTileResources);
             }
         }
@@ -721,8 +721,8 @@ namespace Structures
 
     public class Machine : Actuator
     {
-        [SerializeField] private GameObject[] inputFunnels; // transform.position should round to the conveyor belt it is connected to
-        [SerializeField] private GameObject[] outputFunnels; // transform.position should round to the conveyor belt it is connected to
+        public GameObject[] inputFunnels; // transform.position should round to the conveyor belt it is connected to
+        public GameObject[] outputFunnels; // transform.position should round to the conveyor belt it is connected to
         [SerializeField] private ulong funnelSpeedInTicks = 2;
         [SerializeField] protected int[] numberOfInputs = { 1 };
         [SerializeField] protected int[] numberOfOutputs = { 1 };
@@ -822,7 +822,7 @@ namespace Structures
                     if (inputResources[channel][i] != null) continue;
 
                     Vector2Int funnelTile = GameManager.Vector3ToTile(inputFunnels[channel].transform.position);
-                    List<ConveyedResource> funnelResources = GameManager.Instance.GetTileResources(funnelTile);
+                    List<ConveyedResource> funnelResources = GameManager.Instance.GetConveyorResources(funnelTile);
                     if (funnelResources == null)
                     {
                         // no conveyor belt under the funnel, disable it
@@ -835,7 +835,7 @@ namespace Structures
                         inputFunnels[channel].SetActive(true);
                     }
                     if (funnelResources.Count == 0) break;
-                    ConveyedResource resourceToPickup = funnelResources[0]; // FIFO
+                    ConveyedResource resourceToPickup = funnelResources[0]; 
                     resourceToPickup.ExitConveyPath();
                     inputResources[channel][i] = resourceToPickup;
                     resourceToPickup.EnterInventory();
@@ -855,7 +855,7 @@ namespace Structures
                     if (outputResources[channel][i] == null) continue;
 
                     Vector2Int funnelTile = GameManager.Vector3ToTile(outputFunnels[channel].transform.position);
-                    if (GameManager.Instance.GetTileResources(funnelTile) == null)
+                    if (GameManager.Instance.GetConveyorResources(funnelTile) == null)
                     {
                         // no conveyor belt under the funnel, disable it
                         outputFunnels[channel].SetActive(false);

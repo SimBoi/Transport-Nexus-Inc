@@ -1,5 +1,7 @@
 using System;
+using System.Linq;
 using Inventories;
+using Mono.Cecil;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -34,7 +36,31 @@ public class CargoCart : Cart
 
     public void DropInventory()
     {
-        // foreach (ConveyedResource[] resources in inputResources) foreach (ConveyedResource resource in resources) if (resource != null) resource.ExitInventory();
         foreach (ConveyedResource resource in cargo) if (resource != null) resource.ExitInventory(transform.position);
+        for (int i = 0; i < cargo.Count(); i++) cargo[i] = null;
+    }
+
+    public bool TryInputResource(ConveyedResource resource, Action PrepareResource= null)
+    {
+        for (int i = 0; i < cargo.Count(); i++) if (cargo[i] == null)
+        {
+            if (PrepareResource != null) PrepareResource.Invoke();
+            resource.EnterInventory();
+            cargo[i] = resource;
+            return true;
+        }
+        return false;
+    }
+
+    public ConveyedResource TryOutputResource()
+    {
+        for (int i = 0; i < cargo.Count(); i++) if (cargo[i] != null)
+        {
+            ConveyedResource resource = cargo[i];
+            resource.ExitInventory(transform.position);
+            cargo[i] = null;
+            return resource;
+        }
+        return null;
     }
 }

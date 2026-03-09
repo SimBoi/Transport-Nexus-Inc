@@ -399,7 +399,7 @@ public class GameManager : MonoBehaviour
         }
         else if (_conveyors.ContainsKey(tile))
         {
-            List<ConveyedResource> resources = GetTileResources(tile);
+            List<ConveyedResource> resources = GetConveyorResources(tile);
             while (resources.Count > 0) resources[0].ExitConveyPath();
 
             if (_sensors.ContainsKey(tile))
@@ -653,7 +653,7 @@ public class GameManager : MonoBehaviour
         foreach (Vector2Int dir in neighbors) if (_conveyors.ContainsKey(tile + dir) && _conveyors[tile + dir] is DynamicConveyorBelt neighborConveyor && neighborConveyor.connections.Contains(-dir)) neighborConveyor.Disconnect(-dir);
     }
 
-    public List<ConveyedResource> GetTileResources(Vector2Int tile)
+    public List<ConveyedResource> GetConveyorResources(Vector2Int tile)
     {
         if (!_conveyors.ContainsKey(tile)) return null;
 
@@ -986,10 +986,10 @@ public class GameManager : MonoBehaviour
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////// Conveyors //////////////////////////////////////////
+    //////////////////////////////////////////// Conveyors/Items ////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public void ResourceEnterTile(ConveyedResource resource, Vector2Int tile)
+    public void ResourceEnterConveyor(ConveyedResource resource, Vector2Int tile)
     {
         if (_conveyors[tile] is DynamicConveyorBelt dynamicConveyor) dynamicConveyor.ResourceEnter(resource);
         else if (_conveyors[tile] is SensorConveyorBelt sensorConveyor) sensorConveyor.ResourceEnter(resource);
@@ -997,7 +997,7 @@ public class GameManager : MonoBehaviour
         else throw new Exception("No conveyor found at position: " + tile);
     }
 
-    public void ResourceExitTile(ConveyedResource resource, Vector2Int tile)
+    public void ResourceExitConveyor(ConveyedResource resource, Vector2Int tile)
     {
         if (_conveyors[tile] is DynamicConveyorBelt dynamicConveyor) dynamicConveyor.ResourceExit(resource);
         else if (_conveyors[tile] is SensorConveyorBelt sensorConveyor) sensorConveyor.ResourceExit(resource);

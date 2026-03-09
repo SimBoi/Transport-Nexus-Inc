@@ -16,8 +16,8 @@ public class CargoExchange : Machine
     public override void Awake()
     {
         base.Awake();
-        OnInput += InputFromStructures;
-        OnOutput += OutputToStructures;
+        OnInput += InputFromCart;
+        OnOutput += OutputToCart;
     }
 
     public override string GetStateJson()
@@ -51,13 +51,51 @@ public class CargoExchange : Machine
         }
     }
 
-    public void InputFromStructures()
+    public void InputFromCart()
     {
-        Debug.Log("try input");
+        for (int channel = 0; channel < inputFunnels.Length; channel++)
+        {
+            for (int i = 0; i < numberOfInputs[channel]; i++)
+            {
+                if (inputResources[channel][i] != null) continue;
+
+                Vector2Int funnelTile = GameManager.Vector3ToTile(inputFunnels[channel].transform.position);
+                Cart cart = GameManager.Instance.GetCart(funnelTile);
+                if (cart is CargoCart cargoCart)
+                {
+                    ConveyedResource resourceToPickup = cargoCart.TryOutputResource();
+                    if (resourceToPickup == null) continue;
+                    inputResources[channel][i] = resourceToPickup;
+                    resourceToPickup.EnterInventory();
+                    resourceToPickup.transform.position = transform.position;
+
+                    break; // only pick one resource at a time
+                }
+            }
+        }
     }
 
-    public void OutputToStructures()
+    public void OutputToCart()
     {
-        Debug.Log("try output");
+        for (int channel = 0; channel < outputFunnels.Length; channel++)
+        {
+            for (int i = 0; i < numberOfOutputs[channel]; i++)
+            {
+                if (outputResources[channel][i] == null) continue;
+
+                Vector2Int funnelTile = GameManager.Vector3ToTile(outputFunnels[channel].transform.position);
+                Cart cart = GameManager.Instance.GetCart(funnelTile);
+                if (cart is CargoCart cargoCart)
+                {
+                    if (cargoCart.TryInputResource(outputResources[channel][i], ))
+                    {
+                        outputResources[channel][i].ExitInventory();
+                        outputResources[channel][i] = null;
+                    }
+
+                    break; // only output one resource at a time
+                }
+            }
+        }
     }
 }
