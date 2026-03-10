@@ -791,9 +791,10 @@ namespace Structures
 
         public void Process()
         {
+            if (!isProcessing) return;
             if (GameManager.Instance.tick % funnelSpeedInTicks == 0) OutputToConveyorBelts();
             OnOutput?.Invoke();
-            if (isProcessing) ProcessMachine();
+            ProcessMachine();
             OnProcess?.Invoke();
             if (GameManager.Instance.tick % funnelSpeedInTicks == 0) InputFromConveyorBelts();
             OnInput?.Invoke();
@@ -835,7 +836,7 @@ namespace Structures
                         inputFunnels[channel].SetActive(true);
                     }
                     if (funnelResources.Count == 0) break;
-                    ConveyedResource resourceToPickup = funnelResources[0]; 
+                    ConveyedResource resourceToPickup = funnelResources[0];
                     resourceToPickup.ExitConveyPath();
                     inputResources[channel][i] = resourceToPickup;
                     resourceToPickup.EnterInventory();

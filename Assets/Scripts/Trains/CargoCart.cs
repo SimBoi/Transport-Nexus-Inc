@@ -10,6 +10,12 @@ public class CargoCart : Cart
     [SerializeField] private int capacity = 10;
     private ConveyedResource[] cargo;
 
+
+    public void Awake()
+    {
+        cargo = new ConveyedResource[capacity];
+    }
+
     public override string GetStateJson()
     {
         CombinedState combinedState = new()

@@ -11,7 +11,7 @@ public class CargoExchange : Machine
     public const int speedTicks = 1;
     private int currentProcessingTicks = 0;
 
-    public override string TypeName => GetType().ToString() + speedTicks;
+    public override string TypeName => GetType().ToString();
 
     public override void Awake()
     {
@@ -63,6 +63,8 @@ public class CargoExchange : Machine
                 Cart cart = GameManager.Instance.GetCart(funnelTile);
                 if (cart is CargoCart cargoCart)
                 {
+                    if (cargoCart.train.speed > 0) continue;
+
                     ConveyedResource resourceToPickup = cargoCart.TryOutputResource();
                     if (resourceToPickup == null) continue;
                     inputResources[channel][i] = resourceToPickup;
@@ -81,19 +83,22 @@ public class CargoExchange : Machine
         {
             for (int i = 0; i < numberOfOutputs[channel]; i++)
             {
-                if (outputResources[channel][i] == null) continue;
+                ConveyedResource resource = outputResources[channel][i];
+                if (resource == null) continue;
 
                 Vector2Int funnelTile = GameManager.Vector3ToTile(outputFunnels[channel].transform.position);
                 Cart cart = GameManager.Instance.GetCart(funnelTile);
                 if (cart is CargoCart cargoCart)
                 {
-                    if (cargoCart.TryInputResource(outputResources[channel][i], ))
+                    if (cargoCart.train.speed > 0) continue;
+                    if (cargoCart.TryInputResource(resource, () =>
                     {
-                        outputResources[channel][i].ExitInventory();
+                        resource.ExitInventory();
                         outputResources[channel][i] = null;
+                    }))
+                    {
+                        break; // only output one resource at a time
                     }
-
-                    break; // only output one resource at a time
                 }
             }
         }

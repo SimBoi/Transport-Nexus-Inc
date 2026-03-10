@@ -205,7 +205,7 @@ public class Train : MonoBehaviour, ISavable
     {
         int tileIndex = tilesPath.IndexOf(tile);
         int cartIndex = carts.Count - tileIndex;
-        return carts[cartIndex];
+        return cartIndex < carts.Count ? carts[cartIndex] : null;
     }
 
     public bool AddCart(GameObject cartPrefab, int index = -1)
