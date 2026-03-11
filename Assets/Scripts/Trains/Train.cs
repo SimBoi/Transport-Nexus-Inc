@@ -287,7 +287,7 @@ public class Cart : MonoBehaviour, ISavable
         return JsonConvert.SerializeObject(train.ID);
     }
 
-    public virtual void RestoreStateJson(string stateJson, System.Collections.Generic.Dictionary<int, ISavable> idLookup)
+    public virtual void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
     {
         int trainId = JsonConvert.DeserializeObject<int>(stateJson);
         train = (Train)idLookup[trainId];

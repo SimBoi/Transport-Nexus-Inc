@@ -40,6 +40,11 @@ public class CargoCart : Cart
             cargo[i] = state.Item2[i] == -1 ? null : idLookup[state.Item2[i]] as ConveyedResource;
     }
 
+    public void OnDestroy()
+    {
+        DropInventory();
+    }
+
     public void DropInventory()
     {
         foreach (ConveyedResource resource in cargo) if (resource != null) resource.ExitInventory(transform.position);

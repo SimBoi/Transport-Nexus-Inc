@@ -479,7 +479,7 @@ Rebuilds the game's tile mappings, signal network connections, and train registr
 
 **Phase 4 - Restore Object States**:
 ```csharp
-foreach (SavebleEntry entry in saveData.savables) 
+foreach (SavebleEntry entry in saveData.savables)
     idLookup[entry.id].RestoreStateJson(entry.stateJson, idLookup);
 ```
 Each object deserializes its state, using `idLookup` to resolve cross-references to other objects.
@@ -503,15 +503,17 @@ carts = cartIds.ConvertAll(cartId => (Cart)idLookup[cartId]);
 
 ## Feature Roadmap
 
-1. Structures placement and hotbar UI - Done!
-2. Circuit components and wiring - Done!
-3. Trains and rails network - Done!
-4. Serialization/deserialization - Done!
-5. Items and Conveyor belts - Done!
-6. Machines and funnels - Done!
-7. Code documentation
-8. Cargo carts
-9. Pickup/Drop items interactively
+1.  Structures placement and hotbar UI - Done!
+2.  Circuit components and wiring - Done!
+3.  Trains and rails network - Done!
+4.  Serialization/deserialization - Done!
+5.  Items and Conveyor belts - Done!
+6.  Machines and funnels - Done!
+7.  Code documentation
+8.  Cargo carts - Done!
+9.  Pickup/Drop items interactively
+10. Camera Navigation
+11. Terrain Generation + building limits
 
 ## Bugs/Improvements
 
