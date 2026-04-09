@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Unity.Mathematics;
+using UnityEditor.Rendering;
 using UnityEngine;
 
 public enum Biome
@@ -19,10 +19,20 @@ public class Chunk : MonoBehaviour
     public static int size = 8;
     private Biome[,] biomeMap = new Biome[size, size];
     private int[,] heightMap = new int[size, size];
-    private int[,] VegetationMap = new int[size, size];
+    private int[,] vegetationMap = new int[size, size];
+    private Awaitable dataGenerationTask = null;
+    private Awaitable meshGenerationTask = null;
 
-    public void GenerateData(int seed, Vector2Int chunkCoords)
+    public Awaitable GenerateDataAsync(int seed, Vector2Int chunkCoords)
     {
+        if (dataGenerationTask == null) dataGenerationTask = GenerateDataAsyncAux(seed, chunkCoords);
+        return dataGenerationTask;
+    }
+
+    public async Awaitable GenerateDataAsyncAux(int seed, Vector2Int chunkCoords)
+    {
+        await Awaitable.BackgroundThreadAsync();
+
         // generate biome data
         Vector2Int biomeSeed = new(seed * 41, seed * 14);
         for (int x = 0; x < size; x++) for (int z = 0; z < size; z++)
@@ -71,14 +81,22 @@ public class Chunk : MonoBehaviour
         {
             if (hashMaps[seed][x, z] % 5 == 0)
             {
-                VegetationMap[x, z] = 1;
+                vegetationMap[x, z] = 1;
             }
         }
+
+        await Awaitable.MainThreadAsync();
     }
 
-    public void GenerateMesh()
+    public Awaitable GenerateMeshAsync()
     {
+        if (meshGenerationTask == null) meshGenerationTask = GenerateMeshAsyncAux();
+        return meshGenerationTask;
+    }
 
+    public async Awaitable GenerateMeshAsyncAux()
+    {
+        await dataGenerationTask;
     }
 
     int GetTileHash(int seed, int x, int z)
