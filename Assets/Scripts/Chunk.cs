@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using System.Numerics;
-using UnityEditor.Rendering;
 using UnityEngine;
 
 public enum Biome
