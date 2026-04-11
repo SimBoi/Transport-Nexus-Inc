@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Numerics;
 using UnityEditor.Rendering;
 using UnityEngine;
 
@@ -37,8 +38,9 @@ public class Chunk : MonoBehaviour
         Vector2Int biomeSeed = new(seed * 41, seed * 14);
         for (int x = 0; x < size; x++) for (int z = 0; z < size; z++)
         {
+            Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
             float freq = 1;
-            float noise = Mathf.PerlinNoise(x * freq + biomeSeed.x, z * freq + biomeSeed.y);
+            float noise = Mathf.PerlinNoise(tileCoords.x * freq + biomeSeed.x, tileCoords.y * freq + biomeSeed.y);
             if (noise <= 1)
             {
                 biomeMap[x, z] = Biome.LushPlains;
@@ -53,6 +55,7 @@ public class Chunk : MonoBehaviour
         {
             if (biomeMap[x, z] == Biome.LushPlains)
             {
+                Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
                 float freq1 = 1;
                 float freq2 = 2;
                 float freq3 = 3;
@@ -60,9 +63,9 @@ public class Chunk : MonoBehaviour
                 float scale2 = 2;
                 float scale3 = 1;
                 float scaleSum = scale1 + scale2 + scale3;
-                float noise1 = Mathf.PerlinNoise(x * freq1 + heightSeed1.x, z * freq1 + heightSeed1.y) * scale1;
-                float noise2 = Mathf.PerlinNoise(x * freq2 + heightSeed2.x, z * freq2 + heightSeed2.y) * scale2;
-                float noise3 = Mathf.PerlinNoise(x * freq3 + heightSeed3.x, z * freq3 + heightSeed3.y) * scale3;
+                float noise1 = Mathf.PerlinNoise(tileCoords.x * freq1 + heightSeed1.x, tileCoords.y * freq1 + heightSeed1.y) * scale1;
+                float noise2 = Mathf.PerlinNoise(tileCoords.x * freq2 + heightSeed2.x, tileCoords.y * freq2 + heightSeed2.y) * scale2;
+                float noise3 = Mathf.PerlinNoise(tileCoords.x * freq3 + heightSeed3.x, tileCoords.y * freq3 + heightSeed3.y) * scale3;
                 heightMap[x, z] = Mathf.FloorToInt((noise1 + noise2 + noise3) / scaleSum * 5);
             }
         }
@@ -74,7 +77,8 @@ public class Chunk : MonoBehaviour
             hashMaps.Add(seed + i, new int[size, size]);
             for (int x = 0; x < size; x++) for (int z = 0; z < size; z++)
             {
-                hashMaps[seed + i][x, z] = GetTileHash(seed + i, x, z);
+                Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
+                hashMaps[seed + i][x, z] = GetTileHash(seed + i, tileCoords.x, tileCoords.y);
             }
         }
         for (int x = 0; x < size; x++) for (int z = 0; z < size; z++)
@@ -84,8 +88,6 @@ public class Chunk : MonoBehaviour
                 vegetationMap[x, z] = 1;
             }
         }
-
-        await Awaitable.MainThreadAsync();
     }
 
     public Awaitable GenerateMeshAsync()
@@ -97,6 +99,8 @@ public class Chunk : MonoBehaviour
     public async Awaitable GenerateMeshAsyncAux()
     {
         await dataGenerationTask;
+        await Awaitable.BackgroundThreadAsync();
+        // TODO generate the mesh
     }
 
     int GetTileHash(int seed, int x, int z)
