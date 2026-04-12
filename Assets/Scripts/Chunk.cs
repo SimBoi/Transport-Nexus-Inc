@@ -1,24 +1,14 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
-
-public enum Biome
-{
-    LushPlains
-}
-
-public class TileMesh
-{
-    public Vector3[] vertices;
-    public int[][] submeshTriangles;
-    public Material[] materials;
-}
 
 public class Chunk : MonoBehaviour
 {
     public static int size = 8;
     private Biome[,] biomeMap = new Biome[size, size];
     private int[,] heightMap = new int[size, size];
-    private int[,] vegetationMap = new int[size, size];
+    private int[,] tileVariationMap = new int[size, size]; 
+    private int[,] vegetationVariationMap = new int[size, size];  // -1 means no vegetation on the tile
     private Awaitable dataGenerationTask = null;
     private Awaitable meshGenerationTask = null;
 
@@ -34,7 +24,8 @@ public class Chunk : MonoBehaviour
 
         // generate biome data
         Vector2Int biomeSeed = new(seed * 41, seed * 14);
-        for (int x = 0; x < size; x++) for (int z = 0; z < size; z++)
+        for (int x = 0; x < size; x++)
+        for (int z = 0; z < size; z++)
         {
             Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
             float freq = 1;
@@ -49,7 +40,8 @@ public class Chunk : MonoBehaviour
         Vector2Int heightSeed1 = new(seed * 17, seed * 34);
         Vector2Int heightSeed2 = new(seed * 41, seed * 6);
         Vector2Int heightSeed3 = new(seed * 19, seed * 5);
-        for (int x = 0; x < size; x++) for (int z = 0; z < size; z++)
+        for (int x = 0; x < size; x++)
+        for (int z = 0; z < size; z++)
         {
             if (biomeMap[x, z] == Biome.LushPlains)
             {
@@ -68,43 +60,61 @@ public class Chunk : MonoBehaviour
             }
         }
 
-        // generate vegetation
+        // generate tile variations and vegetation
         Dictionary<int, int[,]> hashMaps = new();
-        for (int i = 0; i < 1; i++)
+        for (int i = 0; i < 2; i++)
         {
             hashMaps.Add(seed + i, new int[size, size]);
-            for (int x = 0; x < size; x++) for (int z = 0; z < size; z++)
+            for (int x = 0; x < size; x++)
+            for (int z = 0; z < size; z++)
             {
                 Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
                 hashMaps[seed + i][x, z] = GetTileHash(seed + i, tileCoords.x, tileCoords.y);
             }
         }
-        for (int x = 0; x < size; x++) for (int z = 0; z < size; z++)
+        for (int x = 0; x < size; x++)
+        for (int z = 0; z < size; z++)
         {
-            if (hashMaps[seed][x, z] % 5 == 0)
-            {
-                vegetationMap[x, z] = 1;
-            }
+            int randTile = hashMaps[seed][x, z] % ChunksManager.instance.lushPlainsTiles[heightMap[x, z]].Length;
+            int randVegetation = hashMaps[seed + 1][x, z] % 5;
+
+            tileVariationMap[x, z] = randTile;
+            vegetationVariationMap[x, z] = randVegetation < ChunksManager.instance.lushPlainsVegetation.Length ? randVegetation : -1;
         }
     }
 
-    public Awaitable GenerateMeshAsync()
+    public Awaitable GenerateMeshAsync(Vector2Int chunkCoords)
     {
-        if (meshGenerationTask == null) meshGenerationTask = GenerateMeshAsyncAux();
+        if (meshGenerationTask == null) meshGenerationTask = GenerateMeshAsyncAux(chunkCoords);
         return meshGenerationTask;
     }
 
-    public async Awaitable GenerateMeshAsyncAux()
+    public async Awaitable GenerateMeshAsyncAux(Vector2Int chunkCoords)
     {
-        await dataGenerationTask;
         await Awaitable.BackgroundThreadAsync();
-        // TODO generate the mesh
+        await dataGenerationTask;
+        
+        ThreadSafeMesh threadSafeMesh = new();
+        for (int x = 0; x < size; x++)
+        for (int z = 0; z < size; z++)
+        {
+            Vector3 localTileCoords = new Vector3(x, 0, z);
+            ThreadSafeMesh tileMesh = ChunksManager.instance.lushPlainsTiles[heightMap[x, z]][tileVariationMap[x, z]];
+            threadSafeMesh.Combine(tileMesh, localTileCoords);
+        }
+
+        await Awaitable.MainThreadAsync();
+        Mesh mesh = new Mesh();
+        // TODO convert threadSafeMesh to unity mesh
+        GetComponent<MeshFilter>().mesh = mesh;
     }
 
+    // get a positive hash from three ints
     int GetTileHash(int seed, int x, int z)
     {
         unchecked
         {
+            // TODO check if these contsants get reevaluated each time the function is called
             const int A = (int)0x9e3779b1;
             const int B = (int)0x85ebca77;
             const int C = (int)0xc2b2ae3d;
@@ -117,7 +127,8 @@ public class Chunk : MonoBehaviour
             hash ^= hash >> 15;
             hash *= E;
             hash ^= hash >> 16;
-            return hash;
+
+            return hash < 0 ? -(hash + 1) : hash;
         }
     }
 }
