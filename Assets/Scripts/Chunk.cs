@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 public class Chunk : MonoBehaviour
@@ -91,10 +90,10 @@ public class Chunk : MonoBehaviour
 
     public async Awaitable GenerateMeshAsyncAux(Vector2Int chunkCoords)
     {
+        // combine the tile meshes on a background thread
         await Awaitable.BackgroundThreadAsync();
         await dataGenerationTask;
-        
-        ThreadSafeMesh threadSafeMesh = new();
+        ThreadSafeMesh threadSafeMesh = new(); // TODO fix this after the default constructor gets removed
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
@@ -103,10 +102,9 @@ public class Chunk : MonoBehaviour
             threadSafeMesh.Combine(tileMesh, localTileCoords);
         }
 
+        // convert to unity mesh on the main thread
         await Awaitable.MainThreadAsync();
-        Mesh mesh = new Mesh();
-        // TODO convert threadSafeMesh to unity mesh
-        GetComponent<MeshFilter>().mesh = mesh;
+        GetComponent<MeshFilter>().mesh = threadSafeMesh.ConvertToUnityMesh();
     }
 
     // get a positive hash from three ints
