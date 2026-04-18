@@ -1,15 +1,35 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(MeshFilter))]
+[RequireComponent(typeof(MeshRenderer))]
 public class Chunk : MonoBehaviour
 {
-    public static int size = 8;
+    public const int size = 8;
     private Biome[,] biomeMap = new Biome[size, size];
     private int[,] heightMap = new int[size, size];
-    private int[,] tileVariationMap = new int[size, size]; 
+    private int[,] tileVariationMap = new int[size, size];
     private int[,] vegetationVariationMap = new int[size, size];  // -1 means no vegetation on the tile
     private Awaitable dataGenerationTask = null;
     private Awaitable meshGenerationTask = null;
+    private Mesh mesh;
+
+    public void Awake()
+    {
+        mesh = new Mesh();
+    }
+
+    public void Clear()
+    {
+        mesh.Clear();
+        GetComponent<MeshFilter>().sharedMesh = null;
+        GetComponent<MeshRenderer>().materials = new Material[0];
+        if (dataGenerationTask != null) dataGenerationTask.Cancel();
+        if (meshGenerationTask != null) meshGenerationTask.Cancel();
+        dataGenerationTask = null;
+        meshGenerationTask = null;
+    }
 
     public Awaitable GenerateDataAsync(int seed, Vector2Int chunkCoords)
     {
@@ -105,7 +125,8 @@ public class Chunk : MonoBehaviour
 
         // convert to unity mesh on the main thread
         await Awaitable.MainThreadAsync();
-        GetComponent<MeshFilter>().mesh = threadSafeMesh.ConvertToUnityMesh(out int[] materialIds);
+        threadSafeMesh.ConvertToUnityMesh(mesh, out int[] materialIds);
+        GetComponent<MeshFilter>().sharedMesh = mesh;
         GetComponent<MeshRenderer>().materials = ChunksManager.instance.GetMaterials(materialIds);
     }
 
@@ -114,7 +135,6 @@ public class Chunk : MonoBehaviour
     {
         unchecked
         {
-            // TODO check if these contsants get reevaluated each time the function is called
             const int A = (int)0x9e3779b1;
             const int B = (int)0x85ebca77;
             const int C = (int)0xc2b2ae3d;

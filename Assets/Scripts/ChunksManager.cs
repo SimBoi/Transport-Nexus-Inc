@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System;
 using UnityEngine.Rendering;
-using System.Threading;
+using System.Linq;
 
 public enum Biome
 {
@@ -101,8 +101,10 @@ public class ThreadSafeMesh
 
         if (normals.Count != vertices.Count)
         {
-            unityMesh.RecalculateNormals();
-            unityMesh.GetNormals(normals);
+            // copy the mesh
+            Mesh tmpMesh = UnityEngine.Object.Instantiate(unityMesh);
+            tmpMesh.RecalculateNormals();
+            tmpMesh.GetNormals(normals);
             EnsureSize(normals, vertices.Count, Vector3.up);
         }
         EnsureSize(tangents, vertices.Count, new Vector4(1, 0, 0, 1));
@@ -182,10 +184,8 @@ public class ThreadSafeMesh
         bounds.Encapsulate(shifted);
     }
 
-    public Mesh ConvertToUnityMesh(out int[] materialIds)
+    public void ConvertToUnityMesh(Mesh mesh, out int[] materialIds)
     {
-        var mesh = new Mesh();
-
         if (vertices.Count > 65535) mesh.indexFormat = IndexFormat.UInt32;
         mesh.SetVertices(vertices);
         mesh.SetNormals(normals);
@@ -210,8 +210,6 @@ public class ThreadSafeMesh
         }
 
         mesh.bounds = bounds;
-        
-        return mesh;
     }
 }
 
@@ -219,14 +217,17 @@ public class ChunksManager : MonoBehaviour
 {
     public static ChunksManager instance { get; private set; }
     [SerializeField] private GameObject chunkPrefab;
+    private Stack<Chunk> chunkPool = new();
     private Dictionary<Vector2Int, Chunk> chunks = new();
     [SerializeField] private Transform center;
+    private Vector2Int prevCenterChunk;
     public int generateDistance;
     public int renderDistance;
+    public int unloadDistance;
     public int seed;
 
     private List<Material> idToMaterial = new();
-    private Dictionary<Material, int> materialToId = new(); 
+    private Dictionary<Material, int> materialToId = new();
     [SerializeField] private GameObject[][] lushPlainsTilePrefabs;
     [SerializeField] private GameObject[] lushPlainsVegetationPrefabs;
     [HideInInspector] public ThreadSafeMesh[][] lushPlainsTiles { get; private set; }
@@ -234,6 +235,13 @@ public class ChunksManager : MonoBehaviour
 
     private void Start()
     {
+        prevCenterChunk = new Vector2Int
+        (
+            Mathf.FloorToInt(center.position.x / Chunk.size),
+            Mathf.FloorToInt(center.position.z / Chunk.size)
+        );
+
+        // convert tile prefabs to thread safe meshes
         lushPlainsTiles = new ThreadSafeMesh[lushPlainsTilePrefabs.Length][];
         for (int height = 0; height < lushPlainsTiles.Length; height++)
         {
@@ -242,7 +250,7 @@ public class ChunksManager : MonoBehaviour
             {
                 lushPlainsTiles[height][i] = new
                 (
-                    lushPlainsTilePrefabs[height][i].GetComponent<MeshFilter>().mesh,
+                    lushPlainsTilePrefabs[height][i].GetComponent<MeshFilter>().sharedMesh,
                     GetMaterialIds(lushPlainsTilePrefabs[height][i].GetComponent<MeshRenderer>().materials)
                 );
             }
@@ -252,9 +260,76 @@ public class ChunksManager : MonoBehaviour
         {
             lushPlainsVegetation[i] = new
             (
-                lushPlainsVegetationPrefabs[i].GetComponent<MeshFilter>().mesh,
+                lushPlainsVegetationPrefabs[i].GetComponent<MeshFilter>().sharedMesh,
                 GetMaterialIds(lushPlainsVegetationPrefabs[i].GetComponent<MeshRenderer>().materials)
             );
+        }
+
+        // prefill chunk pool
+        for (int i = 0; i < unloadDistance * unloadDistance; i++)
+        {
+            chunkPool.Append(Instantiate(chunkPrefab).GetComponent<Chunk>());
+            chunkPool.Peek().gameObject.SetActive(false);
+        }
+    }
+
+    private void Update()
+    {
+        Vector2Int centerChunkCoords = new Vector2Int
+        (
+            Mathf.FloorToInt(center.position.x / Chunk.size),
+            Mathf.FloorToInt(center.position.z / Chunk.size)
+        );
+
+        // unload chunks
+        void UnloadChunk(Vector2Int chunkCoords)
+        {
+            if (chunks.ContainsKey(chunkCoords))
+            {
+                DestroyChunk(chunks[chunkCoords]);
+                chunks.Remove(chunkCoords);
+            }
+        }
+        for (int x = -unloadDistance; x < centerChunkCoords.x - prevCenterChunk.x - unloadDistance; x++)
+        for (int z = -unloadDistance; z <= unloadDistance; z++)
+        {
+            UnloadChunk(new Vector2Int(x, z) + prevCenterChunk);
+        }
+        for (int x = unloadDistance; x > centerChunkCoords.x - prevCenterChunk.x + unloadDistance; x--)
+        for (int z = -unloadDistance; z <= unloadDistance; z++)
+        {
+            UnloadChunk(new Vector2Int(x, z) + prevCenterChunk);
+        }
+        for (int z = -unloadDistance; z < centerChunkCoords.y - prevCenterChunk.y - unloadDistance; z++)
+        for (int x = -unloadDistance; x <= unloadDistance; x++)
+        {
+            UnloadChunk(new Vector2Int(x, z) + prevCenterChunk);
+        }
+        for (int z = unloadDistance; z > centerChunkCoords.y - prevCenterChunk.y + unloadDistance; z--)
+        for (int x = -unloadDistance; x <= unloadDistance; x++)
+        {
+            UnloadChunk(new Vector2Int(x, z) + prevCenterChunk);
+        }
+
+        // load chunks
+        for (int x = -generateDistance; x <= generateDistance; x++)
+        for (int z = -generateDistance; z <= generateDistance; z++)
+        {
+            Vector2Int chunkCoords = new Vector2Int(x, z) + centerChunkCoords;
+            if (!chunks.ContainsKey(chunkCoords))
+            {
+                Chunk chunk = InstantiateChunk
+                (
+                    new Vector3(chunkCoords.x * Chunk.size, 0, chunkCoords.y * Chunk.size),
+                    Quaternion.identity
+                );
+                chunk.GenerateDataAsync(seed, chunkCoords);
+                chunks.Add(chunkCoords, chunk);
+            }
+            if (-renderDistance <= x && x <= renderDistance)
+            {
+                chunks[chunkCoords].GenerateMeshAsync(chunkCoords);
+            }
         }
     }
 
@@ -294,34 +369,25 @@ public class ChunksManager : MonoBehaviour
         return materials;
     }
 
-    private void Update()
+    private Chunk InstantiateChunk(Vector3 position, Quaternion rotation)
     {
-        // load chunks
-        for (int x = -generateDistance; x <= generateDistance; x++)
-        for (int z = -generateDistance; z <= generateDistance; z++)
+        if (chunkPool.Count == 0)
         {
-            Vector2Int chunkCoords = new Vector2Int
-            (
-                Mathf.FloorToInt((center.position.x + x) / Chunk.size),
-                Mathf.FloorToInt((center.position.z + z) / Chunk.size) 
-            );
-            if (!chunks.ContainsKey(chunkCoords))
-            {
-                Chunk chunk = Instantiate
-                (
-                    chunkPrefab,
-                    new Vector3(chunkCoords.x * Chunk.size, 0, chunkCoords.y * Chunk.size),
-                    Quaternion.identity
-                ).GetComponent<Chunk>();
-                chunk.GenerateDataAsync(seed, chunkCoords);
-                chunks.Add(chunkCoords, chunk);
-            }
-            if (-renderDistance <= x && x <= renderDistance)
-            {
-                chunks[chunkCoords].GenerateMeshAsync(chunkCoords);
-            }
+            return Instantiate(chunkPrefab, position, rotation).GetComponent<Chunk>();
         }
+        else
+        {
+            Chunk chunk = chunkPool.Pop();
+            chunk.transform.SetPositionAndRotation(position, rotation);
+            chunk.gameObject.SetActive(true);
+            return chunk;
+        }
+    }
 
-        // TODO unload chunks
+    private void DestroyChunk(Chunk chunk)
+    {
+        chunk.Clear();
+        chunk.gameObject.SetActive(false);
+        chunkPool.Append(chunk);
     }
 }
