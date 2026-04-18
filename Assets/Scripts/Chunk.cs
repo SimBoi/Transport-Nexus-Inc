@@ -93,18 +93,20 @@ public class Chunk : MonoBehaviour
         // combine the tile meshes on a background thread
         await Awaitable.BackgroundThreadAsync();
         await dataGenerationTask;
-        ThreadSafeMesh threadSafeMesh = new(); // TODO fix this after the default constructor gets removed
+        ThreadSafeMesh threadSafeMesh = null;
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
             Vector3 localTileCoords = new Vector3(x, 0, z);
             ThreadSafeMesh tileMesh = ChunksManager.instance.lushPlainsTiles[heightMap[x, z]][tileVariationMap[x, z]];
-            threadSafeMesh.Combine(tileMesh, localTileCoords);
+            if (threadSafeMesh == null) threadSafeMesh = new(tileMesh);
+            else threadSafeMesh.Combine(tileMesh, localTileCoords);
         }
 
         // convert to unity mesh on the main thread
         await Awaitable.MainThreadAsync();
-        GetComponent<MeshFilter>().mesh = threadSafeMesh.ConvertToUnityMesh();
+        GetComponent<MeshFilter>().mesh = threadSafeMesh.ConvertToUnityMesh(out int[] materialIds);
+        GetComponent<MeshRenderer>().materials = ChunksManager.instance.GetMaterials(materialIds);
     }
 
     // get a positive hash from three ints

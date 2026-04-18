@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System;
 using UnityEngine.Rendering;
+using System.Threading;
 
 public enum Biome
 {
@@ -9,11 +10,11 @@ public enum Biome
 }
 
 [Serializable]
-public sealed class ThreadSafeSubmesh
+public struct ThreadSafeSubmesh
 {
     public int materialId;
-    public MeshTopology topology = MeshTopology.Triangles;
-    public List<int> indices = new();
+    public MeshTopology topology;
+    public List<int> indices;
 }
 
 public class ThreadSafeMesh
@@ -21,7 +22,7 @@ public class ThreadSafeMesh
     private List<Vector3> vertices = new();
     private List<Vector3> normals = new();
     private List<Vector4> tangents = new();
-    private List<Color32> colors32 = new();
+    private List<Color> colors = new();
     private List<Vector2> uv0 = new();
     private List<Vector2> uv1 = new();
     private List<Vector2> uv2 = new();
@@ -33,14 +34,42 @@ public class ThreadSafeMesh
     private List<ThreadSafeSubmesh> submeshes = new();
     private Bounds bounds;
 
+    public ThreadSafeMesh(ThreadSafeMesh src)
+    {
+        vertices = new(src.vertices);
+        normals = new(src.normals);
+        tangents = new(src.tangents);
+        colors = new(src.colors);
+        uv0 = new(src.uv0);
+        uv1 = new(src.uv1);
+        uv2 = new(src.uv2);
+        uv3 = new(src.uv3);
+        uv4 = new(src.uv4);
+        uv5 = new(src.uv5);
+        uv6 = new(src.uv6);
+        uv7 = new(src.uv7);
+        submeshes = new(src.submeshes.Count);
+        foreach (var submesh in src.submeshes)
+        {
+            submeshes.Add(new ThreadSafeSubmesh
+            {
+                materialId = submesh.materialId,
+                topology = submesh.topology,
+                indices = new List<int>(submesh.indices)
+            });
+        }
+        bounds = src.bounds;
+    }
+
     public ThreadSafeMesh(Mesh unityMesh, int[] materialIds)
     {
         if (unityMesh.vertexCount == 0) throw new Exception("ThreadSafeMesh cant have 0 vertices");
+        if (unityMesh.subMeshCount != materialIds.Length) throw new Exception("subMeshCount doesnt match the number of materials");
 
         unityMesh.GetVertices(vertices);
         unityMesh.GetNormals(normals);
         unityMesh.GetTangents(tangents);
-        unityMesh.GetColors(colors32);
+        unityMesh.GetColors(colors);
         unityMesh.GetUVs(0, uv0);
         unityMesh.GetUVs(1, uv1);
         unityMesh.GetUVs(2, uv2);
@@ -53,7 +82,7 @@ public class ThreadSafeMesh
         {
             int[] indices = unityMesh.GetIndices(i);
             if (indices == null || indices.Length == 0) continue;
-            submeshes.Add(new ThreadSafeSubmesh()
+            submeshes.Add(new ThreadSafeSubmesh
             {
                 materialId = materialIds[i],
                 topology = unityMesh.GetTopology(i),
@@ -77,7 +106,7 @@ public class ThreadSafeMesh
             EnsureSize(normals, vertices.Count, Vector3.up);
         }
         EnsureSize(tangents, vertices.Count, new Vector4(1, 0, 0, 1));
-        EnsureSize(colors32, vertices.Count, new Color32(255, 255, 255, 255));
+        EnsureSize(colors, vertices.Count, new Color(255, 255, 255, 255));
         EnsureSize(uv0, vertices.Count, Vector2.zero);
         EnsureSize(uv1, vertices.Count, Vector2.zero);
         EnsureSize(uv2, vertices.Count, Vector2.zero);
@@ -88,7 +117,7 @@ public class ThreadSafeMesh
         EnsureSize(uv7, vertices.Count, Vector2.zero);
         if (submeshes.Count == 0)
         {
-            submeshes.Add(new ThreadSafeSubmesh()
+            submeshes.Add(new ThreadSafeSubmesh
             {
                 materialId = materialIds.Length > 0 ? materialIds[0] : 0,
                 topology = MeshTopology.Triangles,
@@ -104,7 +133,7 @@ public class ThreadSafeMesh
         foreach (Vector3 vertex in other.vertices) vertices.Add(vertex + offset);
         normals.AddRange(other.normals);
         tangents.AddRange(other.tangents);
-        colors32.AddRange(other.colors32);
+        colors.AddRange(other.colors);
         uv0.AddRange(other.uv0);
         uv1.AddRange(other.uv1);
         uv2.AddRange(other.uv2);
@@ -157,11 +186,11 @@ public class ThreadSafeMesh
     {
         var mesh = new Mesh();
 
-        if (vertices.Count > 65535) mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        if (vertices.Count > 65535) mesh.indexFormat = IndexFormat.UInt32;
         mesh.SetVertices(vertices);
         mesh.SetNormals(normals);
         mesh.SetTangents(tangents);
-        mesh.SetColors(colors32);
+        mesh.SetColors(colors);
         mesh.SetUVs(0, uv0);
         mesh.SetUVs(1, uv1);
         mesh.SetUVs(2, uv2);
@@ -249,10 +278,20 @@ public class ChunksManager : MonoBehaviour
         return materialIds;
     }
 
-    private Material GetMaterial(int materialId)
+    public Material GetMaterial(int materialId)
     {
         if (materialId >= idToMaterial.Count) return null;
         return idToMaterial[materialId];
+    }
+
+    public Material[] GetMaterials(int[] materialIds)
+    {
+        Material[] materials = new Material[materialIds.Length];
+        for (int i = 0; i < materialIds.Length; i++)
+        {
+            materials[i] = GetMaterial(materialIds[i]);
+        }
+        return materials;
     }
 
     private void Update()
