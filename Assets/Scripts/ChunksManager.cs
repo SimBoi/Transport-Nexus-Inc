@@ -213,6 +213,24 @@ public class ThreadSafeMesh
     }
 }
 
+[Serializable]
+public struct GameObjectArray
+{
+    public GameObject[] array;
+    public readonly int Length => array.Length;
+
+    public GameObjectArray(int size)
+    {
+        array = new GameObject[size];
+    }
+
+    public GameObject this[int index]
+    {
+        get { return array[index]; }
+        set { array[index] = value; }
+    }
+}
+
 public class ChunksManager : MonoBehaviour
 {
     public static ChunksManager instance { get; private set; }
@@ -228,10 +246,16 @@ public class ChunksManager : MonoBehaviour
 
     private List<Material> idToMaterial = new();
     private Dictionary<Material, int> materialToId = new();
-    [SerializeField] private GameObject[][] lushPlainsTilePrefabs;
+    [SerializeField] private GameObjectArray[] lushPlainsTilePrefabs;
     [SerializeField] private GameObject[] lushPlainsVegetationPrefabs;
     [HideInInspector] public ThreadSafeMesh[][] lushPlainsTiles { get; private set; }
     [HideInInspector] public ThreadSafeMesh[] lushPlainsVegetation { get; private set; }
+
+    private void Awake()
+    {
+        if (instance) Destroy(this);
+        instance = this;
+    }
 
     private void Start()
     {
@@ -251,7 +275,7 @@ public class ChunksManager : MonoBehaviour
                 lushPlainsTiles[height][i] = new
                 (
                     lushPlainsTilePrefabs[height][i].GetComponent<MeshFilter>().sharedMesh,
-                    GetMaterialIds(lushPlainsTilePrefabs[height][i].GetComponent<MeshRenderer>().materials)
+                    GetMaterialIds(lushPlainsTilePrefabs[height][i].GetComponent<MeshRenderer>().sharedMaterials)
                 );
             }
         }
@@ -261,14 +285,14 @@ public class ChunksManager : MonoBehaviour
             lushPlainsVegetation[i] = new
             (
                 lushPlainsVegetationPrefabs[i].GetComponent<MeshFilter>().sharedMesh,
-                GetMaterialIds(lushPlainsVegetationPrefabs[i].GetComponent<MeshRenderer>().materials)
+                GetMaterialIds(lushPlainsVegetationPrefabs[i].GetComponent<MeshRenderer>().sharedMaterials)
             );
         }
 
         // prefill chunk pool
         for (int i = 0; i < unloadDistance * unloadDistance; i++)
         {
-            chunkPool.Append(Instantiate(chunkPrefab).GetComponent<Chunk>());
+            chunkPool.Push(Instantiate(chunkPrefab).GetComponent<Chunk>());
             chunkPool.Peek().gameObject.SetActive(false);
         }
     }
@@ -326,7 +350,7 @@ public class ChunksManager : MonoBehaviour
                 chunk.GenerateDataAsync(seed, chunkCoords);
                 chunks.Add(chunkCoords, chunk);
             }
-            if (-renderDistance <= x && x <= renderDistance)
+            if (-renderDistance <= x && x <= renderDistance && -renderDistance <= z && z <= renderDistance)
             {
                 chunks[chunkCoords].GenerateMeshAsync(chunkCoords);
             }

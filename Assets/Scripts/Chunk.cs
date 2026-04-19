@@ -33,7 +33,7 @@ public class Chunk : MonoBehaviour
 
     public Awaitable GenerateDataAsync(int seed, Vector2Int chunkCoords)
     {
-        if (dataGenerationTask == null) dataGenerationTask = GenerateDataAsyncAux(seed, chunkCoords);
+        dataGenerationTask ??= GenerateDataAsyncAux(seed, chunkCoords);
         return dataGenerationTask;
     }
 
@@ -65,9 +65,9 @@ public class Chunk : MonoBehaviour
             if (biomeMap[x, z] == Biome.LushPlains)
             {
                 Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
-                float freq1 = 1;
-                float freq2 = 2;
-                float freq3 = 3;
+                float freq1 = .1f;
+                float freq2 = .2f;
+                float freq3 = .3f;
                 float scale1 = 3;
                 float scale2 = 2;
                 float scale3 = 1;
@@ -102,9 +102,23 @@ public class Chunk : MonoBehaviour
         }
     }
 
+    private static void Print2DArray<T>(T[,] array)
+    {
+        string s = "";
+        for (int i = 0; i < array.GetLength(0); i++)
+        {
+            for (int j = 0; j < array.GetLength(1); j++)
+            {
+                s += array[i, j].ToString() + "    ";
+            }
+            s += "\n";
+        }
+        print(s);
+    }
+
     public Awaitable GenerateMeshAsync(Vector2Int chunkCoords)
     {
-        if (meshGenerationTask == null) meshGenerationTask = GenerateMeshAsyncAux(chunkCoords);
+        meshGenerationTask ??= GenerateMeshAsyncAux(chunkCoords);
         return meshGenerationTask;
     }
 
@@ -119,6 +133,7 @@ public class Chunk : MonoBehaviour
         {
             Vector3 localTileCoords = new Vector3(x, 0, z);
             ThreadSafeMesh tileMesh = ChunksManager.instance.lushPlainsTiles[heightMap[x, z]][tileVariationMap[x, z]];
+            print(heightMap[x, z]);
             if (threadSafeMesh == null) threadSafeMesh = new(tileMesh);
             else threadSafeMesh.Combine(tileMesh, localTileCoords);
         }
