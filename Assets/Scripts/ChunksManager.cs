@@ -19,20 +19,19 @@ public struct ThreadSafeSubmesh
 
 public class ThreadSafeMesh
 {
-    private List<Vector3> vertices = new();
-    private List<Vector3> normals = new();
-    private List<Vector4> tangents = new();
-    private List<Color> colors = new();
-    private List<Vector2> uv0 = new();
-    private List<Vector2> uv1 = new();
-    private List<Vector2> uv2 = new();
-    private List<Vector2> uv3 = new();
-    private List<Vector2> uv4 = new();
-    private List<Vector2> uv5 = new();
-    private List<Vector2> uv6 = new();
-    private List<Vector2> uv7 = new();
-    private List<ThreadSafeSubmesh> submeshes = new();
-    private Bounds bounds;
+    private List<Vector3> vertices;
+    private List<Vector3> normals;
+    private List<Vector4> tangents;
+    private List<Color> colors;
+    private List<Vector2> uv0;
+    private List<Vector2> uv1;
+    private List<Vector2> uv2;
+    private List<Vector2> uv3;
+    private List<Vector2> uv4;
+    private List<Vector2> uv5;
+    private List<Vector2> uv6;
+    private List<Vector2> uv7;
+    private List<ThreadSafeSubmesh> submeshes;
 
     public ThreadSafeMesh(ThreadSafeMesh src)
     {
@@ -58,15 +57,31 @@ public class ThreadSafeMesh
                 indices = new List<int>(submesh.indices)
             });
         }
-        bounds = src.bounds;
     }
 
-    public ThreadSafeMesh(Mesh unityMesh, int[] materialIds)
+    public ThreadSafeMesh(Mesh unityMesh, int[] materialIds, Transform transform)
     {
         if (unityMesh.vertexCount == 0) throw new Exception("ThreadSafeMesh cant have 0 vertices");
         if (unityMesh.subMeshCount != materialIds.Length) throw new Exception("subMeshCount doesnt match the number of materials");
 
+        vertices = new(unityMesh.vertexCount);
+        normals = new(unityMesh.vertexCount);
+        tangents = new(unityMesh.vertexCount);
+        colors = new(unityMesh.vertexCount);
+        uv0 = new(unityMesh.vertexCount);
+        uv1 = new(unityMesh.vertexCount);
+        uv2 = new(unityMesh.vertexCount);
+        uv3 = new(unityMesh.vertexCount);
+        uv4 = new(unityMesh.vertexCount);
+        uv5 = new(unityMesh.vertexCount);
+        uv6 = new(unityMesh.vertexCount);
+        uv7 = new(unityMesh.vertexCount);
+        submeshes = new(unityMesh.subMeshCount);
+
         unityMesh.GetVertices(vertices);
+        Vector3[] transformedPoints = new Vector3[unityMesh.vertexCount];
+        transform.TransformPoints(vertices.ToArray(), transformedPoints);
+        vertices = new(transformedPoints.ToArray());
         unityMesh.GetNormals(normals);
         unityMesh.GetTangents(tangents);
         unityMesh.GetColors(colors);
@@ -89,7 +104,6 @@ public class ThreadSafeMesh
                 indices = new List<int>(indices)
             });
         }
-        bounds = unityMesh.bounds;
 
         // fill missing values
 
@@ -178,10 +192,6 @@ public class ThreadSafeMesh
                 dstIndices.Add(other.submeshes[i].indices[t] + baseVertex);
             }
         }
-
-        Bounds shifted = other.bounds;
-        shifted.center += offset;
-        bounds.Encapsulate(shifted);
     }
 
     public void ConvertToUnityMesh(Mesh mesh, out int[] materialIds)
@@ -209,7 +219,7 @@ public class ThreadSafeMesh
             mesh.SetIndices(s.indices, s.topology, i, false);
         }
 
-        mesh.bounds = bounds;
+        mesh.RecalculateBounds();
     }
 }
 
@@ -275,7 +285,8 @@ public class ChunksManager : MonoBehaviour
                 lushPlainsTiles[height][i] = new
                 (
                     lushPlainsTilePrefabs[height][i].GetComponent<MeshFilter>().sharedMesh,
-                    GetMaterialIds(lushPlainsTilePrefabs[height][i].GetComponent<MeshRenderer>().sharedMaterials)
+                    GetMaterialIds(lushPlainsTilePrefabs[height][i].GetComponent<MeshRenderer>().sharedMaterials),
+                    lushPlainsTilePrefabs[height][i].transform
                 );
             }
         }
@@ -285,7 +296,8 @@ public class ChunksManager : MonoBehaviour
             lushPlainsVegetation[i] = new
             (
                 lushPlainsVegetationPrefabs[i].GetComponent<MeshFilter>().sharedMesh,
-                GetMaterialIds(lushPlainsVegetationPrefabs[i].GetComponent<MeshRenderer>().sharedMaterials)
+                GetMaterialIds(lushPlainsVegetationPrefabs[i].GetComponent<MeshRenderer>().sharedMaterials),
+                lushPlainsVegetationPrefabs[i].transform
             );
         }
 

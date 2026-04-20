@@ -11,8 +11,10 @@ public class Chunk : MonoBehaviour
     private int[,] heightMap = new int[size, size];
     private int[,] tileVariationMap = new int[size, size];
     private int[,] vegetationVariationMap = new int[size, size];  // -1 means no vegetation on the tile
+    private bool dataReady = false;
+    private bool meshReady = false;
     private Awaitable dataGenerationTask = null;
-    private Awaitable meshGenerationTask = null;
+    private Awaitable meshGenerationTask = null;  // TODO handle Awaitable on cancel exception
     private Mesh mesh;
 
     public void Awake()
@@ -25,16 +27,17 @@ public class Chunk : MonoBehaviour
         mesh.Clear();
         GetComponent<MeshFilter>().sharedMesh = null;
         GetComponent<MeshRenderer>().materials = new Material[0];
-        if (dataGenerationTask != null) dataGenerationTask.Cancel();
-        if (meshGenerationTask != null) meshGenerationTask.Cancel();
+        if (!dataReady && dataGenerationTask != null) dataGenerationTask.Cancel();
+        if (!meshReady && meshGenerationTask != null) meshGenerationTask.Cancel();
         dataGenerationTask = null;
         meshGenerationTask = null;
     }
 
-    public Awaitable GenerateDataAsync(int seed, Vector2Int chunkCoords)
+    public async Awaitable GenerateDataAsync(int seed, Vector2Int chunkCoords)
     {
+        if (dataReady) return;
         dataGenerationTask ??= GenerateDataAsyncAux(seed, chunkCoords);
-        return dataGenerationTask;
+        await dataGenerationTask;
     }
 
     public async Awaitable GenerateDataAsyncAux(int seed, Vector2Int chunkCoords)
@@ -100,6 +103,9 @@ public class Chunk : MonoBehaviour
             tileVariationMap[x, z] = randTile;
             vegetationVariationMap[x, z] = randVegetation < ChunksManager.instance.lushPlainsVegetation.Length ? randVegetation : -1;
         }
+        Print2DArray(vegetationVariationMap);
+
+        dataReady = true;
     }
 
     private static void Print2DArray<T>(T[,] array)
@@ -116,24 +122,25 @@ public class Chunk : MonoBehaviour
         print(s);
     }
 
-    public Awaitable GenerateMeshAsync(Vector2Int chunkCoords)
+    public async Awaitable GenerateMeshAsync(Vector2Int chunkCoords)
     {
+        if (meshReady) return;
         meshGenerationTask ??= GenerateMeshAsyncAux(chunkCoords);
-        return meshGenerationTask;
+        await meshGenerationTask;
+        return;
     }
 
     public async Awaitable GenerateMeshAsyncAux(Vector2Int chunkCoords)
     {
         // combine the tile meshes on a background thread
         await Awaitable.BackgroundThreadAsync();
-        await dataGenerationTask;
+        if (!dataReady) await dataGenerationTask;
         ThreadSafeMesh threadSafeMesh = null;
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
             Vector3 localTileCoords = new Vector3(x, 0, z);
             ThreadSafeMesh tileMesh = ChunksManager.instance.lushPlainsTiles[heightMap[x, z]][tileVariationMap[x, z]];
-            print(heightMap[x, z]);
             if (threadSafeMesh == null) threadSafeMesh = new(tileMesh);
             else threadSafeMesh.Combine(tileMesh, localTileCoords);
         }
@@ -143,6 +150,8 @@ public class Chunk : MonoBehaviour
         threadSafeMesh.ConvertToUnityMesh(mesh, out int[] materialIds);
         GetComponent<MeshFilter>().sharedMesh = mesh;
         GetComponent<MeshRenderer>().materials = ChunksManager.instance.GetMaterials(materialIds);
+
+        meshReady = true;
     }
 
     // get a positive hash from three ints
