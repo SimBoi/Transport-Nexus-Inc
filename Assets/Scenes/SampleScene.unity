@@ -2902,9 +2902,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ChunksManager
   chunkPrefab: {fileID: 4165186504263952819, guid: aea4c298eabd5990f842fb7080363656, type: 3}
   center: {fileID: 330585546}
-  generateDistance: 0
-  renderDistance: 0
-  unloadDistance: 6
+  generateDistance: 2
+  renderDistance: 1
+  unloadDistance: 3
   seed: 0
   lushPlainsTilePrefabs:
   - array:
