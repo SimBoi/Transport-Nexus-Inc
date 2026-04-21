@@ -32,10 +32,12 @@ public class ThreadSafeMesh
     private List<Vector2> uv6;
     private List<Vector2> uv7;
     private List<ThreadSafeSubmesh> submeshes;
+    public float MaxY { get; private set; }
 
-    public ThreadSafeMesh(ThreadSafeMesh src)
+    public ThreadSafeMesh(ThreadSafeMesh src, Vector3 offset)
     {
-        vertices = new(src.vertices);
+        vertices = new(src.vertices.Count);
+        for (int i = 0; i < src.vertices.Count; i++) vertices.Add(src.vertices[i] + offset);
         normals = new(src.normals);
         tangents = new(src.tangents);
         colors = new(src.colors);
@@ -57,6 +59,7 @@ public class ThreadSafeMesh
                 indices = new List<int>(submesh.indices)
             });
         }
+        MaxY = src.MaxY + offset.y;
     }
 
     public ThreadSafeMesh(Mesh unityMesh, int[] materialIds, Transform transform)
@@ -104,6 +107,7 @@ public class ThreadSafeMesh
                 indices = new List<int>(indices)
             });
         }
+        foreach (Vector3 vertex in vertices) MaxY = Mathf.Max(MaxY, vertex.y);
 
         // fill missing values
 
@@ -191,6 +195,8 @@ public class ThreadSafeMesh
             {
                 dstIndices.Add(other.submeshes[i].indices[t] + baseVertex);
             }
+
+            MaxY = Mathf.Max(MaxY, other.MaxY + offset.y);
         }
     }
 
@@ -359,12 +365,12 @@ public class ChunksManager : MonoBehaviour
                     new Vector3(chunkCoords.x * Chunk.size, 0, chunkCoords.y * Chunk.size),
                     Quaternion.identity
                 );
-                chunk.GenerateDataAsync(seed, chunkCoords);
+                _ = chunk.GenerateDataAsync(seed, chunkCoords);
                 chunks.Add(chunkCoords, chunk);
             }
             if (-renderDistance <= x && x <= renderDistance && -renderDistance <= z && z <= renderDistance)
             {
-                chunks[chunkCoords].GenerateMeshAsync(chunkCoords);
+                _ = chunks[chunkCoords].GenerateMeshAsync(chunkCoords);
             }
         }
     }

@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SocialPlatforms;
 
-[RequireComponent(typeof(MeshFilter))]
-[RequireComponent(typeof(MeshRenderer))]
 public class Chunk : MonoBehaviour
 {
     public const int size = 8;
@@ -14,19 +13,26 @@ public class Chunk : MonoBehaviour
     private bool dataReady = false;
     private bool meshReady = false;
     private Awaitable dataGenerationTask = null;
-    private Awaitable meshGenerationTask = null;  // TODO handle Awaitable on cancel exception
-    private Mesh mesh;
+    private Awaitable meshGenerationTask = null;
+    private Mesh tilesMesh;
+    private Mesh vegetationMesh;
+    [SerializeField] GameObject tilesGameObject;
+    [SerializeField] GameObject vegetationGameObject;
+    // TODO spawn materials
 
     public void Awake()
     {
-        mesh = new Mesh();
+        tilesMesh = new Mesh();
+        vegetationMesh = new Mesh();
     }
 
     public void Clear()
     {
-        mesh.Clear();
-        GetComponent<MeshFilter>().sharedMesh = null;
-        GetComponent<MeshRenderer>().materials = new Material[0];
+        tilesMesh.Clear();
+        tilesGameObject.GetComponent<MeshFilter>().sharedMesh = null;
+        vegetationGameObject.GetComponent<MeshFilter>().sharedMesh = null;
+        tilesGameObject.GetComponent<MeshRenderer>().materials = null;
+        vegetationGameObject.GetComponent<MeshRenderer>().materials = null;
         if (!dataReady && dataGenerationTask != null) dataGenerationTask.Cancel();
         if (!meshReady && meshGenerationTask != null) meshGenerationTask.Cancel();
         dataGenerationTask = null;
@@ -37,7 +43,8 @@ public class Chunk : MonoBehaviour
     {
         if (dataReady) return;
         dataGenerationTask ??= GenerateDataAsyncAux(seed, chunkCoords);
-        await dataGenerationTask;
+        try { await dataGenerationTask; }
+        catch (OperationCanceledException) {}
     }
 
     public async Awaitable GenerateDataAsyncAux(int seed, Vector2Int chunkCoords)
@@ -126,8 +133,8 @@ public class Chunk : MonoBehaviour
     {
         if (meshReady) return;
         meshGenerationTask ??= GenerateMeshAsyncAux(chunkCoords);
-        await meshGenerationTask;
-        return;
+        try { await meshGenerationTask; } 
+        catch (OperationCanceledException) {}
     }
 
     public async Awaitable GenerateMeshAsyncAux(Vector2Int chunkCoords)
@@ -135,21 +142,37 @@ public class Chunk : MonoBehaviour
         // combine the tile meshes on a background thread
         await Awaitable.BackgroundThreadAsync();
         if (!dataReady) await dataGenerationTask;
-        ThreadSafeMesh threadSafeMesh = null;
+        ThreadSafeMesh threadSafeTilesMesh = null;
+        ThreadSafeMesh threadSafeVegetationMesh = null;
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
-            Vector3 localTileCoords = new Vector3(x, 0, z);
+            Vector3 tileOffset = new(x, 0, z);
+
             ThreadSafeMesh tileMesh = ChunksManager.instance.lushPlainsTiles[heightMap[x, z]][tileVariationMap[x, z]];
-            if (threadSafeMesh == null) threadSafeMesh = new(tileMesh);
-            else threadSafeMesh.Combine(tileMesh, localTileCoords);
+            if (threadSafeTilesMesh == null) threadSafeTilesMesh = new(tileMesh, tileOffset);
+            else threadSafeTilesMesh.Combine(tileMesh, tileOffset);
+        
+            if (vegetationVariationMap[x, z] > -1)
+            {
+                ThreadSafeMesh singleVegetationMesh = ChunksManager.instance.lushPlainsVegetation[vegetationVariationMap[x, z]];
+                Vector3 vegetationOffset = tileOffset + new Vector3(0, tileMesh.MaxY, 0);
+                if (threadSafeVegetationMesh == null) threadSafeVegetationMesh = new(singleVegetationMesh, vegetationOffset);
+                else threadSafeVegetationMesh.Combine(singleVegetationMesh, vegetationOffset);
+            }
         }
 
         // convert to unity mesh on the main thread
         await Awaitable.MainThreadAsync();
-        threadSafeMesh.ConvertToUnityMesh(mesh, out int[] materialIds);
-        GetComponent<MeshFilter>().sharedMesh = mesh;
-        GetComponent<MeshRenderer>().materials = ChunksManager.instance.GetMaterials(materialIds);
+        threadSafeTilesMesh.ConvertToUnityMesh(tilesMesh, out int[] tilesMaterialIds);
+        threadSafeVegetationMesh.ConvertToUnityMesh(vegetationMesh, out int[] vegetationMaterialIds);
+        tilesGameObject.GetComponent<MeshFilter>().sharedMesh = tilesMesh;
+        tilesGameObject.GetComponent<MeshRenderer>().materials = ChunksManager.instance.GetMaterials(tilesMaterialIds);
+        if (vegetationMesh != null)
+        {
+            vegetationGameObject.GetComponent<MeshRenderer>().materials = ChunksManager.instance.GetMaterials(vegetationMaterialIds);
+            vegetationGameObject.GetComponent<MeshFilter>().sharedMesh = vegetationMesh;
+        }
 
         meshReady = true;
     }
