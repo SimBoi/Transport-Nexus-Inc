@@ -4,6 +4,12 @@ using System;
 using UnityEngine.Rendering;
 using System.Linq;
 
+public enum ResourceNode
+{
+    iron,
+    coal
+}
+
 public enum Biome
 {
     LushPlains
@@ -264,8 +270,10 @@ public class ChunksManager : MonoBehaviour
     private Dictionary<Material, int> materialToId = new();
     [SerializeField] private GameObjectArray[] lushPlainsTilePrefabs;
     [SerializeField] private GameObject[] lushPlainsVegetationPrefabs;
+    [SerializeField] private GameObjectArray[] lushPlainsResourceNodePrefabs;
     [HideInInspector] public ThreadSafeMesh[][] lushPlainsTiles { get; private set; }
     [HideInInspector] public ThreadSafeMesh[] lushPlainsVegetation { get; private set; }
+    [HideInInspector] public ThreadSafeMesh[][] lushPlainsResourceNodes { get; private set; }
 
     private void Awake()
     {
@@ -281,7 +289,7 @@ public class ChunksManager : MonoBehaviour
             Mathf.FloorToInt(center.position.z / Chunk.size)
         );
 
-        // convert tile prefabs to thread safe meshes
+        // convert prefabs to thread safe meshes
         lushPlainsTiles = new ThreadSafeMesh[lushPlainsTilePrefabs.Length][];
         for (int height = 0; height < lushPlainsTiles.Length; height++)
         {
@@ -306,7 +314,22 @@ public class ChunksManager : MonoBehaviour
                 lushPlainsVegetationPrefabs[i].transform
             );
         }
-
+        lushPlainsResourceNodes = new ThreadSafeMesh[lushPlainsResourceNodePrefabs.Length][];
+        foreach (ResourceNode node in Enum.GetValues(typeof(ResourceNode)))
+        {
+            int nodeIndex = (int)node;
+            lushPlainsResourceNodes[nodeIndex] = new ThreadSafeMesh[lushPlainsResourceNodePrefabs[nodeIndex].Length];
+            for (int i = 0; i < lushPlainsResourceNodes[nodeIndex].Length; i++)
+            {
+                lushPlainsResourceNodes[nodeIndex][i] = new
+                (
+                    lushPlainsResourceNodePrefabs[nodeIndex][i].GetComponent<MeshFilter>().sharedMesh,
+                    GetMaterialIds(lushPlainsResourceNodePrefabs[nodeIndex][i].GetComponent<MeshRenderer>().sharedMaterials),
+                    lushPlainsResourceNodePrefabs[nodeIndex][i].transform
+                );
+            }
+        }
+ 
         // prefill chunk pool
         for (int i = 0; i < unloadDistance * unloadDistance; i++)
         {
