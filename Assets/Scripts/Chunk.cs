@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class Chunk : MonoBehaviour
 {
@@ -8,7 +9,7 @@ public class Chunk : MonoBehaviour
     private Biome[,] biomeMap = new Biome[size, size];
     private int[,] heightMap = new int[size, size];
     private bool[,] vegetationMap = new bool[size, size];
-    private int[,] resourceNodeMap = new int[size, size];
+    private ResourceNode[,] resourceNodeMap = new ResourceNode[size, size];
     private int[,] tileVariationMap = new int[size, size];
     private int[,] vegetationVariationMap = new int[size, size];
     private int[,] resourceNodeVariationMap = new int[size, size];
@@ -116,31 +117,43 @@ public class Chunk : MonoBehaviour
                 float noise2 = Mathf.PerlinNoise(tileCoords.x * freq2 + vegetationSeed2.x, tileCoords.y * freq2 + vegetationSeed2.y) * scale2;
                 float noise3 = Mathf.PerlinNoise(tileCoords.x * freq3 + vegetationSeed3.x, tileCoords.y * freq3 + vegetationSeed3.y) * scale3;
                 float finalNoise = (noise1 + noise2 + noise3) / scaleSum;
-                vegetationMap[x, z] = finalNoise > .7f;
+                vegetationMap[x, z] = finalNoise > .8f;
             }
         } 
 
         // generate resource node data
-        Vector2Int resourceNodeSeed1 = GetVec2Hash(seed + 8);
-        Vector2Int resourceNodeSeed2 = GetVec2Hash(seed + 9);
-        Vector2Int resourceNodeSeed3 = GetVec2Hash(seed + 10);
+        Vector2Int ironNodeSeed1 = GetVec2Hash(seed + 8);
+        Vector2Int ironNodeSeed2 = GetVec2Hash(seed + 9);
+        Vector2Int coalNodeSeed1 = GetVec2Hash(seed + 10);
+        Vector2Int coalNodeSeed2 = GetVec2Hash(seed + 11);
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
             if (biomeMap[x, z] == Biome.LushPlains)
             {
                 Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
-                float freq1 = .1f;
-                float freq2 = .2f;
-                float freq3 = .3f;
-                float scale1 = 3;
-                float scale2 = 2;
-                float scale3 = 1;
-                float scaleSum = scale1 + scale2 + scale3;
-                float noise1 = Mathf.PerlinNoise(tileCoords.x * freq1 + resourceNodeSeed1.x, tileCoords.y * freq1 + resourceNodeSeed1.y) * scale1;
-                float noise2 = Mathf.PerlinNoise(tileCoords.x * freq2 + resourceNodeSeed2.x, tileCoords.y * freq2 + resourceNodeSeed2.y) * scale2;
-                float noise3 = Mathf.PerlinNoise(tileCoords.x * freq3 + resourceNodeSeed3.x, tileCoords.y * freq3 + resourceNodeSeed3.y) * scale3;
-                resourceNodeMap[x, z] = Mathf.FloorToInt((noise1 + noise2 + noise3) / scaleSum * 5);
+ 
+                float ironFreq1 = .1f;
+                float ironFreq2 = .2f;
+                float ironScale1 = 3;
+                float ironScale2 = 2;
+                float ironNoise1 = Mathf.PerlinNoise(tileCoords.x * ironFreq1 + ironNodeSeed1.x, tileCoords.y * ironFreq1 + ironNodeSeed1.y) * ironScale1;
+                float ironNoise2 = Mathf.PerlinNoise(tileCoords.x * ironFreq2 + ironNodeSeed2.x, tileCoords.y * ironFreq2 + ironNodeSeed2.y) * ironScale2;
+                float ironFinalNoise = (ironNoise1 + ironNoise2) / (ironScale1 + ironScale2);
+
+                float coalFreq1 = .1f;
+                float coalFreq2 = .2f;
+                float coalScale1 = 3;
+                float coalScale2 = 2;
+                float coalNoise1 = Mathf.PerlinNoise(tileCoords.x * coalFreq1 + coalNodeSeed1.x, tileCoords.y * coalFreq1 + coalNodeSeed1.y) * coalScale1;
+                float coalNoise2 = Mathf.PerlinNoise(tileCoords.x * coalFreq2 + coalNodeSeed2.x, tileCoords.y * coalFreq2 + coalNodeSeed2.y) * coalScale2;
+                float coalFinalNoise = (coalNoise1 + coalNoise2) / (coalScale1 + coalScale2);
+
+                // prioritise certain materials by checking them first
+                if (heightMap[x, z] != 1) resourceNodeMap[x, z] = ResourceNode.none;
+                else if (ironFinalNoise > .9f) resourceNodeMap[x, z] = ResourceNode.iron;
+                else if (coalFinalNoise > .8f) resourceNodeMap[x, z] = ResourceNode.coal;
+                else resourceNodeMap[x, z] = ResourceNode.none;
             }
         }
 
@@ -159,12 +172,9 @@ public class Chunk : MonoBehaviour
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
-            int randTile = hashMaps[seed][x, z] % ChunksManager.instance.lushPlainsTiles[heightMap[x, z]].Length;
-            int randVegetation = hashMaps[seed + 1][x, z] % 5;
-            int randResourceNode = hashMaps[seed + 2][x, z] % ChunksManager.instance.lushPlainsResourceNodes[]
-
-            tileVariationMap[x, z] = randTile;
-            vegetationVariationMap[x, z] = randVegetation < ChunksManager.instance.lushPlainsVegetation.Length ? randVegetation : -1;
+            tileVariationMap[x, z] = hashMaps[seed][x, z] % ChunksManager.instance.lushPlainsTiles[heightMap[x, z]].Length;
+            vegetationVariationMap[x, z] = hashMaps[seed + 1][x, z] % ChunksManager.instance.lushPlainsVegetation.Length;
+            resourceNodeVariationMap[x, z] = hashMaps[seed + 2][x, z] % ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]].Length;
         }
 
         dataReady = true;
@@ -208,13 +218,15 @@ public class Chunk : MonoBehaviour
             if (threadSafeTilesMesh == null) threadSafeTilesMesh = new(tileMesh, tileOffset);
             else threadSafeTilesMesh.Combine(tileMesh, tileOffset);
         
-            if (vegetationVariationMap[x, z] > -1)
+            if (vegetationMap[x, z])
             {
                 ThreadSafeMesh singleVegetationMesh = ChunksManager.instance.lushPlainsVegetation[vegetationVariationMap[x, z]];
                 Vector3 vegetationOffset = tileOffset + new Vector3(0, tileMesh.MaxY, 0);
                 if (threadSafeVegetationMesh == null) threadSafeVegetationMesh = new(singleVegetationMesh, vegetationOffset);
                 else threadSafeVegetationMesh.Combine(singleVegetationMesh, vegetationOffset);
             }
+
+            // TODO generate resources mesh
         }
 
         // convert to unity mesh on the main thread

@@ -7,7 +7,8 @@ using System.Linq;
 public enum ResourceNode
 {
     iron,
-    coal
+    coal,
+    none
 }
 
 public enum Biome
