@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class Chunk : MonoBehaviour
 {
@@ -22,7 +21,7 @@ public class Chunk : MonoBehaviour
     private Mesh resourceNodesMesh;
     [SerializeField] GameObject tilesGameObject;
     [SerializeField] GameObject vegetationGameObject;
-    [SerializeField] GameObject resourceNodesGameObjects;
+    [SerializeField] GameObject resourceNodesGameObject;
 
     public void Awake()
     {
@@ -36,10 +35,10 @@ public class Chunk : MonoBehaviour
         tilesMesh.Clear();
         tilesGameObject.GetComponent<MeshFilter>().sharedMesh = null;
         vegetationGameObject.GetComponent<MeshFilter>().sharedMesh = null;
-        resourceNodesGameObjects.GetComponent<MeshFilter>().sharedMesh = null;
-        tilesGameObject.GetComponent<MeshRenderer>().materials = null;
-        vegetationGameObject.GetComponent<MeshRenderer>().materials = null;
-        resourceNodesGameObjects.GetComponent<MeshRenderer>().materials = null;
+        resourceNodesGameObject.GetComponent<MeshFilter>().sharedMesh = null;
+        tilesGameObject.GetComponent<MeshRenderer>().materials = new Material[0];
+        vegetationGameObject.GetComponent<MeshRenderer>().materials = new Material[0];
+        resourceNodesGameObject.GetComponent<MeshRenderer>().materials = new Material[0];
         if (!dataReady && dataGenerationTask != null) dataGenerationTask.Cancel();
         if (!meshReady && meshGenerationTask != null) meshGenerationTask.Cancel();
         dataGenerationTask = null;
@@ -57,15 +56,18 @@ public class Chunk : MonoBehaviour
     public async Awaitable GenerateDataAsyncAux(int seed, Vector2Int chunkCoords)
     {
         await Awaitable.BackgroundThreadAsync();
+        
+        FastNoiseLite simplex2 = new();
+        simplex2.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
 
         // generate biome data
-        Vector2Int biomeSeed = GetVec2Hash(seed + 1);
+        simplex2.SetSeed(seed);
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
             Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
             float freq = 1;
-            float noise = Mathf.PerlinNoise(tileCoords.x * freq + biomeSeed.x, tileCoords.y * freq + biomeSeed.y);
+            float noise = simplex2.GetNoise(tileCoords.x * freq, tileCoords.y * freq);
             if (noise <= 1)
             {
                 biomeMap[x, z] = Biome.LushPlains;
@@ -73,51 +75,47 @@ public class Chunk : MonoBehaviour
         }
 
         // generate height data
-        Vector2Int heightSeed1 = GetVec2Hash(seed + 2);
-        Vector2Int heightSeed2 = GetVec2Hash(seed + 3);
-        Vector2Int heightSeed3 = GetVec2Hash(seed + 4);
+        simplex2.SetSeed(seed + 1);
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
             if (biomeMap[x, z] == Biome.LushPlains)
             {
                 Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
-                float freq1 = .1f;
-                float freq2 = .2f;
-                float freq3 = .3f;
+                float freq1 = 0.1f;
+                float freq2 = 0.2f;
+                float freq3 = 0.3f;
                 float scale1 = 3;
-                float scale2 = 2;
+                float scale2 = 2; // TODO change noise range to -1:1
                 float scale3 = 1;
                 float scaleSum = scale1 + scale2 + scale3;
-                float noise1 = Mathf.PerlinNoise(tileCoords.x * freq1 + heightSeed1.x, tileCoords.y * freq1 + heightSeed1.y) * scale1;
-                float noise2 = Mathf.PerlinNoise(tileCoords.x * freq2 + heightSeed2.x, tileCoords.y * freq2 + heightSeed2.y) * scale2;
-                float noise3 = Mathf.PerlinNoise(tileCoords.x * freq3 + heightSeed3.x, tileCoords.y * freq3 + heightSeed3.y) * scale3;
+                float noise1 = simplex2.GetNoise(tileCoords.x * freq1, tileCoords.y * freq1) * scale1;
+                float noise2 = simplex2.GetNoise(tileCoords.x * freq2, tileCoords.y * freq2) * scale2;
+                float noise3 = simplex2.GetNoise(tileCoords.x * freq3, tileCoords.y * freq3) * scale3;
                 heightMap[x, z] = Mathf.FloorToInt((noise1 + noise2 + noise3) / scaleSum * ChunksManager.instance.lushPlainsTiles.Length);
             }
         }
 
         // generate vegetation data
-        Vector2Int vegetationSeed1 = GetVec2Hash(seed + 5);
-        Vector2Int vegetationSeed2 = GetVec2Hash(seed + 6);
-        Vector2Int vegetationSeed3 = GetVec2Hash(seed + 7);
+        simplex2.SetSeed(seed + 2);
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
             if (biomeMap[x, z] == Biome.LushPlains)
             {
                 Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
-                float freq1 = .1f;
-                float freq2 = .2f;
-                float freq3 = .3f;
+                float freq1 = 0.1f;
+                float freq2 = 0.2f;
+                float freq3 = 0.3f;
                 float scale1 = 3;
                 float scale2 = 2;
                 float scale3 = 1;
                 float scaleSum = scale1 + scale2 + scale3;
-                float noise1 = Mathf.PerlinNoise(tileCoords.x * freq1 + vegetationSeed1.x, tileCoords.y * freq1 + vegetationSeed1.y) * scale1;
-                float noise2 = Mathf.PerlinNoise(tileCoords.x * freq2 + vegetationSeed2.x, tileCoords.y * freq2 + vegetationSeed2.y) * scale2;
-                float noise3 = Mathf.PerlinNoise(tileCoords.x * freq3 + vegetationSeed3.x, tileCoords.y * freq3 + vegetationSeed3.y) * scale3;
+                float noise1 = simplex2.GetNoise(tileCoords.x * freq1, tileCoords.y * freq1) * scale1;
+                float noise2 = simplex2.GetNoise(tileCoords.x * freq2, tileCoords.y * freq2) * scale2;
+                float noise3 = simplex2.GetNoise(tileCoords.x * freq3, tileCoords.y * freq3) * scale3;
                 float finalNoise = (noise1 + noise2 + noise3) / scaleSum;
-                vegetationMap[x, z] = finalNoise > .8f;
+                vegetationMap[x, z] = finalNoise > 0.8f;
             }
         } 
 
@@ -132,27 +130,28 @@ public class Chunk : MonoBehaviour
             if (biomeMap[x, z] == Biome.LushPlains)
             {
                 Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
- 
-                float ironFreq1 = .1f;
-                float ironFreq2 = .2f;
+                simplex2.SetSeed(seed + 3);
+                float ironFreq1 = 0.1f;
+                float ironFreq2 = 0.2f;
                 float ironScale1 = 3;
                 float ironScale2 = 2;
-                float ironNoise1 = Mathf.PerlinNoise(tileCoords.x * ironFreq1 + ironNodeSeed1.x, tileCoords.y * ironFreq1 + ironNodeSeed1.y) * ironScale1;
-                float ironNoise2 = Mathf.PerlinNoise(tileCoords.x * ironFreq2 + ironNodeSeed2.x, tileCoords.y * ironFreq2 + ironNodeSeed2.y) * ironScale2;
+                float ironNoise1 = simplex2.GetNoise(tileCoords.x * ironFreq1, tileCoords.y * ironFreq1) * ironScale1;
+                float ironNoise2 = simplex2.GetNoise(tileCoords.x * ironFreq2, tileCoords.y * ironFreq2) * ironScale2;
                 float ironFinalNoise = (ironNoise1 + ironNoise2) / (ironScale1 + ironScale2);
 
-                float coalFreq1 = .1f;
-                float coalFreq2 = .2f;
+                simplex2.SetSeed(seed + 4);
+                float coalFreq1 = 0.1f;
+                float coalFreq2 = 0.2f;
                 float coalScale1 = 3;
                 float coalScale2 = 2;
-                float coalNoise1 = Mathf.PerlinNoise(tileCoords.x * coalFreq1 + coalNodeSeed1.x, tileCoords.y * coalFreq1 + coalNodeSeed1.y) * coalScale1;
-                float coalNoise2 = Mathf.PerlinNoise(tileCoords.x * coalFreq2 + coalNodeSeed2.x, tileCoords.y * coalFreq2 + coalNodeSeed2.y) * coalScale2;
+                float coalNoise1 = simplex2.GetNoise(tileCoords.x * coalFreq1, tileCoords.y * coalFreq1) * coalScale1;
+                float coalNoise2 = simplex2.GetNoise(tileCoords.x * coalFreq2, tileCoords.y * coalFreq2) * coalScale2;
                 float coalFinalNoise = (coalNoise1 + coalNoise2) / (coalScale1 + coalScale2);
 
                 // prioritise certain materials by checking them first
                 if (heightMap[x, z] != 1) resourceNodeMap[x, z] = ResourceNode.none;
-                else if (ironFinalNoise > .9f) resourceNodeMap[x, z] = ResourceNode.iron;
-                else if (coalFinalNoise > .8f) resourceNodeMap[x, z] = ResourceNode.coal;
+                else if (ironFinalNoise > 0.9f) resourceNodeMap[x, z] = ResourceNode.iron;
+                else if (coalFinalNoise > 0.8f) resourceNodeMap[x, z] = ResourceNode.coal;
                 else resourceNodeMap[x, z] = ResourceNode.none;
             }
         }
@@ -174,8 +173,10 @@ public class Chunk : MonoBehaviour
         {
             tileVariationMap[x, z] = hashMaps[seed][x, z] % ChunksManager.instance.lushPlainsTiles[heightMap[x, z]].Length;
             vegetationVariationMap[x, z] = hashMaps[seed + 1][x, z] % ChunksManager.instance.lushPlainsVegetation.Length;
-            resourceNodeVariationMap[x, z] = hashMaps[seed + 2][x, z] % ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]].Length;
+            if (resourceNodeMap[x, z] != ResourceNode.none) resourceNodeVariationMap[x, z] = hashMaps[seed + 2][x, z] % ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]].Length;
         }
+
+        Print2DArray(heightMap);
 
         dataReady = true;
     }
@@ -209,6 +210,7 @@ public class Chunk : MonoBehaviour
         if (!dataReady) await dataGenerationTask;
         ThreadSafeMesh threadSafeTilesMesh = null;
         ThreadSafeMesh threadSafeVegetationMesh = null;
+        ThreadSafeMesh threadSafeResourceNodesMesh = null;
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
@@ -226,19 +228,31 @@ public class Chunk : MonoBehaviour
                 else threadSafeVegetationMesh.Combine(singleVegetationMesh, vegetationOffset);
             }
 
-            // TODO generate resources mesh
+            if (resourceNodeMap[x, z] != ResourceNode.none)
+            {
+                ThreadSafeMesh resourceNodeMesh = ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]][resourceNodeVariationMap[x, z]];
+                Vector3 resourceNodeOffset = tileOffset + new Vector3(0, tileMesh.MaxY, 0);
+                if (threadSafeResourceNodesMesh == null) threadSafeResourceNodesMesh = new(resourceNodeMesh, resourceNodeOffset);
+                else threadSafeResourceNodesMesh.Combine(resourceNodeMesh, resourceNodeOffset);
+            }
         }
 
         // convert to unity mesh on the main thread
         await Awaitable.MainThreadAsync();
         threadSafeTilesMesh.ConvertToUnityMesh(tilesMesh, out int[] tilesMaterialIds);
-        threadSafeVegetationMesh.ConvertToUnityMesh(vegetationMesh, out int[] vegetationMaterialIds);
         tilesGameObject.GetComponent<MeshFilter>().sharedMesh = tilesMesh;
         tilesGameObject.GetComponent<MeshRenderer>().materials = ChunksManager.instance.GetMaterials(tilesMaterialIds);
-        if (vegetationMesh != null)
+        if (threadSafeVegetationMesh != null)
         {
+            threadSafeVegetationMesh.ConvertToUnityMesh(vegetationMesh, out int[] vegetationMaterialIds);
             vegetationGameObject.GetComponent<MeshRenderer>().materials = ChunksManager.instance.GetMaterials(vegetationMaterialIds);
             vegetationGameObject.GetComponent<MeshFilter>().sharedMesh = vegetationMesh;
+        }
+        if (threadSafeResourceNodesMesh != null)
+        {
+            threadSafeResourceNodesMesh.ConvertToUnityMesh(resourceNodesMesh, out int[]resourceNodesMaterialIds);
+            resourceNodesGameObject.GetComponent<MeshRenderer>().materials = ChunksManager.instance.GetMaterials(resourceNodesMaterialIds);
+            resourceNodesGameObject.GetComponent<MeshFilter>().sharedMesh = resourceNodesMesh;
         }
 
         meshReady = true;

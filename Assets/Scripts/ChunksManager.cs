@@ -318,6 +318,7 @@ public class ChunksManager : MonoBehaviour
         lushPlainsResourceNodes = new ThreadSafeMesh[lushPlainsResourceNodePrefabs.Length][];
         foreach (ResourceNode node in Enum.GetValues(typeof(ResourceNode)))
         {
+            if (node == ResourceNode.none) continue;
             int nodeIndex = (int)node;
             lushPlainsResourceNodes[nodeIndex] = new ThreadSafeMesh[lushPlainsResourceNodePrefabs[nodeIndex].Length];
             for (int i = 0; i < lushPlainsResourceNodes[nodeIndex].Length; i++)
