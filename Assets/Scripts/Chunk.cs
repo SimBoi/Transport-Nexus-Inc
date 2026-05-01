@@ -56,7 +56,7 @@ public class Chunk : MonoBehaviour
     public async Awaitable GenerateDataAsyncAux(int seed, Vector2Int chunkCoords)
     {
         await Awaitable.BackgroundThreadAsync();
-        
+
         FastNoiseLite simplex2 = new();
         simplex2.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
 
@@ -86,13 +86,14 @@ public class Chunk : MonoBehaviour
                 float freq2 = 0.2f;
                 float freq3 = 0.3f;
                 float scale1 = 3;
-                float scale2 = 2; // TODO change noise range to -1:1
+                float scale2 = 2;
                 float scale3 = 1;
                 float scaleSum = scale1 + scale2 + scale3;
                 float noise1 = simplex2.GetNoise(tileCoords.x * freq1, tileCoords.y * freq1) * scale1;
                 float noise2 = simplex2.GetNoise(tileCoords.x * freq2, tileCoords.y * freq2) * scale2;
                 float noise3 = simplex2.GetNoise(tileCoords.x * freq3, tileCoords.y * freq3) * scale3;
-                heightMap[x, z] = Mathf.FloorToInt((noise1 + noise2 + noise3) / scaleSum * ChunksManager.instance.lushPlainsTiles.Length);
+                float finalNoise = (noise1 + noise2 + noise3) / scaleSum;
+                heightMap[x, z] = Mathf.FloorToInt((finalNoise + 1) / 2 * ChunksManager.instance.lushPlainsTiles.Length);
             }
         }
 
@@ -115,15 +116,11 @@ public class Chunk : MonoBehaviour
                 float noise2 = simplex2.GetNoise(tileCoords.x * freq2, tileCoords.y * freq2) * scale2;
                 float noise3 = simplex2.GetNoise(tileCoords.x * freq3, tileCoords.y * freq3) * scale3;
                 float finalNoise = (noise1 + noise2 + noise3) / scaleSum;
-                vegetationMap[x, z] = finalNoise > 0.8f;
+                vegetationMap[x, z] = finalNoise > 0.6f;
             }
-        } 
+        }
 
         // generate resource node data
-        Vector2Int ironNodeSeed1 = GetVec2Hash(seed + 8);
-        Vector2Int ironNodeSeed2 = GetVec2Hash(seed + 9);
-        Vector2Int coalNodeSeed1 = GetVec2Hash(seed + 10);
-        Vector2Int coalNodeSeed2 = GetVec2Hash(seed + 11);
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
@@ -150,8 +147,8 @@ public class Chunk : MonoBehaviour
 
                 // prioritise certain materials by checking them first
                 if (heightMap[x, z] != 1) resourceNodeMap[x, z] = ResourceNode.none;
-                else if (ironFinalNoise > 0.9f) resourceNodeMap[x, z] = ResourceNode.iron;
-                else if (coalFinalNoise > 0.8f) resourceNodeMap[x, z] = ResourceNode.coal;
+                else if (ironFinalNoise > 0.8f) resourceNodeMap[x, z] = ResourceNode.iron;
+                else if (coalFinalNoise > 0.6f) resourceNodeMap[x, z] = ResourceNode.coal;
                 else resourceNodeMap[x, z] = ResourceNode.none;
             }
         }
@@ -176,8 +173,6 @@ public class Chunk : MonoBehaviour
             if (resourceNodeMap[x, z] != ResourceNode.none) resourceNodeVariationMap[x, z] = hashMaps[seed + 2][x, z] % ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]].Length;
         }
 
-        Print2DArray(heightMap);
-
         dataReady = true;
     }
 
@@ -199,7 +194,7 @@ public class Chunk : MonoBehaviour
     {
         if (meshReady) return;
         meshGenerationTask ??= GenerateMeshAsyncAux(chunkCoords);
-        try { await meshGenerationTask; } 
+        try { await meshGenerationTask; }
         catch (OperationCanceledException) {}
     }
 
@@ -212,30 +207,30 @@ public class Chunk : MonoBehaviour
         ThreadSafeMesh threadSafeVegetationMesh = null;
         ThreadSafeMesh threadSafeResourceNodesMesh = null;
         for (int x = 0; x < size; x++)
-        for (int z = 0; z < size; z++)
-        {
-            Vector3 tileOffset = new(x, 0, z);
-
-            ThreadSafeMesh tileMesh = ChunksManager.instance.lushPlainsTiles[heightMap[x, z]][tileVariationMap[x, z]];
-            if (threadSafeTilesMesh == null) threadSafeTilesMesh = new(tileMesh, tileOffset);
-            else threadSafeTilesMesh.Combine(tileMesh, tileOffset);
-        
-            if (vegetationMap[x, z])
+            for (int z = 0; z < size; z++)
             {
-                ThreadSafeMesh singleVegetationMesh = ChunksManager.instance.lushPlainsVegetation[vegetationVariationMap[x, z]];
-                Vector3 vegetationOffset = tileOffset + new Vector3(0, tileMesh.MaxY, 0);
-                if (threadSafeVegetationMesh == null) threadSafeVegetationMesh = new(singleVegetationMesh, vegetationOffset);
-                else threadSafeVegetationMesh.Combine(singleVegetationMesh, vegetationOffset);
-            }
+                Vector3 tileOffset = new(x, 0, z);
 
-            if (resourceNodeMap[x, z] != ResourceNode.none)
-            {
-                ThreadSafeMesh resourceNodeMesh = ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]][resourceNodeVariationMap[x, z]];
-                Vector3 resourceNodeOffset = tileOffset + new Vector3(0, tileMesh.MaxY, 0);
-                if (threadSafeResourceNodesMesh == null) threadSafeResourceNodesMesh = new(resourceNodeMesh, resourceNodeOffset);
-                else threadSafeResourceNodesMesh.Combine(resourceNodeMesh, resourceNodeOffset);
+                ThreadSafeMesh tileMesh = ChunksManager.instance.lushPlainsTiles[heightMap[x, z]][tileVariationMap[x, z]];
+                if (threadSafeTilesMesh == null) threadSafeTilesMesh = new(tileMesh, tileOffset);
+                else threadSafeTilesMesh.Combine(tileMesh, tileOffset);
+
+                if (vegetationMap[x, z])
+                {
+                    ThreadSafeMesh singleVegetationMesh = ChunksManager.instance.lushPlainsVegetation[vegetationVariationMap[x, z]];
+                    Vector3 vegetationOffset = tileOffset + new Vector3(0, tileMesh.MaxY, 0);
+                    if (threadSafeVegetationMesh == null) threadSafeVegetationMesh = new(singleVegetationMesh, vegetationOffset);
+                    else threadSafeVegetationMesh.Combine(singleVegetationMesh, vegetationOffset);
+                }
+
+                if (resourceNodeMap[x, z] != ResourceNode.none)
+                {
+                    ThreadSafeMesh resourceNodeMesh = ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]][resourceNodeVariationMap[x, z]];
+                    Vector3 resourceNodeOffset = tileOffset + new Vector3(0, tileMesh.MaxY, 0);
+                    if (threadSafeResourceNodesMesh == null) threadSafeResourceNodesMesh = new(resourceNodeMesh, resourceNodeOffset);
+                    else threadSafeResourceNodesMesh.Combine(resourceNodeMesh, resourceNodeOffset);
+                }
             }
-        }
 
         // convert to unity mesh on the main thread
         await Awaitable.MainThreadAsync();
@@ -250,7 +245,7 @@ public class Chunk : MonoBehaviour
         }
         if (threadSafeResourceNodesMesh != null)
         {
-            threadSafeResourceNodesMesh.ConvertToUnityMesh(resourceNodesMesh, out int[]resourceNodesMaterialIds);
+            threadSafeResourceNodesMesh.ConvertToUnityMesh(resourceNodesMesh, out int[] resourceNodesMaterialIds);
             resourceNodesGameObject.GetComponent<MeshRenderer>().materials = ChunksManager.instance.GetMaterials(resourceNodesMaterialIds);
             resourceNodesGameObject.GetComponent<MeshFilter>().sharedMesh = resourceNodesMesh;
         }
@@ -276,38 +271,6 @@ public class Chunk : MonoBehaviour
             hash ^= hash >> 16;
 
             return hash < 0 ? -(hash + 1) : hash;
-        }
-    }
-
-    Vector2Int GetVec2Hash(int x)
-    {
-        unchecked
-        {
-            const int A = unchecked((int)0x9E3779B9);
-            const int B = unchecked((int)0x7F4A7C15);
-            const int C = unchecked((int)0x94D049BB);
-            const int D = unchecked((int)0xED5AD4BB);
-            const int E = unchecked((int)0xAC4C1B51);
-            const int F = unchecked((int)0x31848BAB);
-
-            int h1 = x * A;
-            h1 ^= h1 >> 16;
-            h1 *= B;
-            h1 ^= h1 >> 13;
-            h1 *= C;
-            h1 ^= h1 >> 16;
-
-            int h2 = x * D;
-            h2 ^= h2 >> 15;
-            h2 *= E;
-            h2 ^= h2 >> 14;
-            h2 *= F;
-            h2 ^= h2 >> 15;
-
-            if (h1 < 0) h1 = -(h1 + 1);
-            if (h2 < 0) h2 = -(h2 + 1);
-
-            return new Vector2Int(h1, h2);
         }
     }
 }
