@@ -57,17 +57,17 @@ public class Chunk : MonoBehaviour
     {
         await Awaitable.BackgroundThreadAsync();
 
-        FastNoiseLite simplex2 = new();
-        simplex2.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
 
         // generate biome data
-        simplex2.SetSeed(seed);
+        FastNoiseLite biomeNoise = new(seed);
+        biomeNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+        biomeNoise.SetFrequency(0.1f);
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
             Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
             float freq = 1;
-            float noise = simplex2.GetNoise(tileCoords.x * freq, tileCoords.y * freq);
+            float noise = biomeNoise.GetNoise(tileCoords.x * freq, tileCoords.y * freq);
             if (noise <= 1)
             {
                 biomeMap[x, z] = Biome.LushPlains;
@@ -75,80 +75,62 @@ public class Chunk : MonoBehaviour
         }
 
         // generate height data
-        simplex2.SetSeed(seed + 1);
+        FastNoiseLite lushPlainsHeightNoise = new(seed + 1);
+        lushPlainsHeightNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+        lushPlainsHeightNoise.SetFrequency(0.1f);
+        lushPlainsHeightNoise.SetFractalType(FastNoiseLite.FractalType.FBm);
+        lushPlainsHeightNoise.SetFractalOctaves(1);
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
             if (biomeMap[x, z] == Biome.LushPlains)
             {
                 Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
-                float freq1 = 0.1f;
-                float freq2 = 0.2f;
-                float freq3 = 0.3f;
-                float scale1 = 3;
-                float scale2 = 2;
-                float scale3 = 1;
-                float scaleSum = scale1 + scale2 + scale3;
-                float noise1 = simplex2.GetNoise(tileCoords.x * freq1, tileCoords.y * freq1) * scale1;
-                float noise2 = simplex2.GetNoise(tileCoords.x * freq2, tileCoords.y * freq2) * scale2;
-                float noise3 = simplex2.GetNoise(tileCoords.x * freq3, tileCoords.y * freq3) * scale3;
-                float finalNoise = (noise1 + noise2 + noise3) / scaleSum;
-                heightMap[x, z] = Mathf.FloorToInt((finalNoise + 1) / 2 * ChunksManager.instance.lushPlainsTiles.Length);
+                float noise = (lushPlainsHeightNoise.GetNoise(tileCoords.x, tileCoords.y) + 1) / 2;
+                heightMap[x, z] = Mathf.FloorToInt(noise * ChunksManager.instance.lushPlainsTiles.Length);
             }
         }
 
         // generate vegetation data
-        simplex2.SetSeed(seed + 2);
+        FastNoiseLite vegetationNoise = new(seed + 2);
+        vegetationNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+        vegetationNoise.SetFrequency(0.1f);
+        vegetationNoise.SetFractalType(FastNoiseLite.FractalType.FBm);
+        vegetationNoise.SetFractalOctaves(2);
         for (int x = 0; x < size; x++)
-        for (int z = 0; z < size; z++)
-        {
-            if (biomeMap[x, z] == Biome.LushPlains)
+            for (int z = 0; z < size; z++)
             {
-                Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
-                float freq1 = 0.1f;
-                float freq2 = 0.2f;
-                float freq3 = 0.3f;
-                float scale1 = 3;
-                float scale2 = 2;
-                float scale3 = 1;
-                float scaleSum = scale1 + scale2 + scale3;
-                float noise1 = simplex2.GetNoise(tileCoords.x * freq1, tileCoords.y * freq1) * scale1;
-                float noise2 = simplex2.GetNoise(tileCoords.x * freq2, tileCoords.y * freq2) * scale2;
-                float noise3 = simplex2.GetNoise(tileCoords.x * freq3, tileCoords.y * freq3) * scale3;
-                float finalNoise = (noise1 + noise2 + noise3) / scaleSum;
-                vegetationMap[x, z] = finalNoise > 0.6f;
+                if (biomeMap[x, z] == Biome.LushPlains)
+                {
+                    Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
+                    float noise = vegetationNoise.GetNoise(tileCoords.x, tileCoords.y);
+                    vegetationMap[x, z] = noise > 0.6f;
+                }
             }
-        }
 
         // generate resource node data
+        FastNoiseLite ironNodesNoise = new(seed + 3);
+        ironNodesNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+        ironNodesNoise.SetFrequency(0.1f);
+        ironNodesNoise.SetFractalType(FastNoiseLite.FractalType.FBm);
+        ironNodesNoise.SetFractalOctaves(2);
+        FastNoiseLite coalNodesNoise = new(seed + 4);
+        coalNodesNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+        coalNodesNoise.SetFrequency(0.1f);
+        coalNodesNoise.SetFractalType(FastNoiseLite.FractalType.FBm);
+        coalNodesNoise.SetFractalOctaves(2);
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
             if (biomeMap[x, z] == Biome.LushPlains)
             {
                 Vector2Int tileCoords = chunkCoords * size + new Vector2Int(x, z);
-                simplex2.SetSeed(seed + 3);
-                float ironFreq1 = 0.1f;
-                float ironFreq2 = 0.2f;
-                float ironScale1 = 3;
-                float ironScale2 = 2;
-                float ironNoise1 = simplex2.GetNoise(tileCoords.x * ironFreq1, tileCoords.y * ironFreq1) * ironScale1;
-                float ironNoise2 = simplex2.GetNoise(tileCoords.x * ironFreq2, tileCoords.y * ironFreq2) * ironScale2;
-                float ironFinalNoise = (ironNoise1 + ironNoise2) / (ironScale1 + ironScale2);
-
-                simplex2.SetSeed(seed + 4);
-                float coalFreq1 = 0.1f;
-                float coalFreq2 = 0.2f;
-                float coalScale1 = 3;
-                float coalScale2 = 2;
-                float coalNoise1 = simplex2.GetNoise(tileCoords.x * coalFreq1, tileCoords.y * coalFreq1) * coalScale1;
-                float coalNoise2 = simplex2.GetNoise(tileCoords.x * coalFreq2, tileCoords.y * coalFreq2) * coalScale2;
-                float coalFinalNoise = (coalNoise1 + coalNoise2) / (coalScale1 + coalScale2);
-
+                float ironNoise = ironNodesNoise.GetNoise(tileCoords.x, tileCoords.y);
+                float coalNoise = coalNodesNoise.GetNoise(tileCoords.x, tileCoords.y);
                 // prioritise certain materials by checking them first
                 if (heightMap[x, z] != 1) resourceNodeMap[x, z] = ResourceNode.none;
-                else if (ironFinalNoise > 0.8f) resourceNodeMap[x, z] = ResourceNode.iron;
-                else if (coalFinalNoise > 0.6f) resourceNodeMap[x, z] = ResourceNode.coal;
+                else if (ironNoise > 0.8f) resourceNodeMap[x, z] = ResourceNode.iron;
+                else if (coalNoise > 0.6f) resourceNodeMap[x, z] = ResourceNode.coal;
                 else resourceNodeMap[x, z] = ResourceNode.none;
             }
         }
