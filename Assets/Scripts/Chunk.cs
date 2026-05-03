@@ -128,10 +128,10 @@ public class Chunk : MonoBehaviour
                 float ironNoise = ironNodesNoise.GetNoise(tileCoords.x, tileCoords.y);
                 float coalNoise = coalNodesNoise.GetNoise(tileCoords.x, tileCoords.y);
                 // prioritise certain materials by checking them first
-                if (heightMap[x, z] != 1) resourceNodeMap[x, z] = ResourceNode.none;
-                else if (ironNoise > 0.8f) resourceNodeMap[x, z] = ResourceNode.iron;
-                else if (coalNoise > 0.6f) resourceNodeMap[x, z] = ResourceNode.coal;
-                else resourceNodeMap[x, z] = ResourceNode.none;
+                if (heightMap[x, z] != 1) resourceNodeMap[x, z] = ResourceNode.None;
+                else if (ironNoise > 0.8f) resourceNodeMap[x, z] = ResourceNode.Iron;
+                else if (coalNoise > 0.6f) resourceNodeMap[x, z] = ResourceNode.Coal;
+                else resourceNodeMap[x, z] = ResourceNode.None;
             }
         }
 
@@ -152,7 +152,7 @@ public class Chunk : MonoBehaviour
         {
             tileVariationMap[x, z] = hashMaps[seed][x, z] % ChunksManager.instance.lushPlainsTiles[heightMap[x, z]].Length;
             vegetationVariationMap[x, z] = hashMaps[seed + 1][x, z] % ChunksManager.instance.lushPlainsVegetation.Length;
-            if (resourceNodeMap[x, z] != ResourceNode.none) resourceNodeVariationMap[x, z] = hashMaps[seed + 2][x, z] % ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]].Length;
+            if (resourceNodeMap[x, z] != ResourceNode.None) resourceNodeVariationMap[x, z] = hashMaps[seed + 2][x, z] % ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]].Length;
         }
 
         dataReady = true;
@@ -205,7 +205,7 @@ public class Chunk : MonoBehaviour
                     else threadSafeVegetationMesh.Combine(singleVegetationMesh, vegetationOffset);
                 }
 
-                if (resourceNodeMap[x, z] != ResourceNode.none)
+                if (resourceNodeMap[x, z] != ResourceNode.None)
                 {
                     ThreadSafeMesh resourceNodeMesh = ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]][resourceNodeVariationMap[x, z]];
                     Vector3 resourceNodeOffset = tileOffset + new Vector3(0, tileMesh.MaxY, 0);
@@ -254,5 +254,19 @@ public class Chunk : MonoBehaviour
 
             return hash < 0 ? -(hash + 1) : hash;
         }
+    }
+
+    public bool CanBuild(Vector2Int localTileCoords)
+    {
+        int x = localTileCoords.x;
+        int z = localTileCoords.y;
+        return heightMap[x, z] == 1 && !vegetationMap[x, z];
+    }
+
+    public ResourceNode GetResourceNode(Vector2Int localTileCoords)
+    {
+        int x = localTileCoords.x;
+        int z = localTileCoords.y;
+        return resourceNodeMap[x, z];
     }
 }

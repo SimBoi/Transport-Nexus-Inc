@@ -7,12 +7,14 @@ public class PrefabRegistries : MonoBehaviour
     public static PrefabRegistries Instance { get; private set; }
 
     // prefabs
-    [SerializeField] private List<GameObject> savablePrefabs;
+    [SerializeField] private List<GameObject> savablePrefabs; // TODO clean up duplicate registries in the code base
     [SerializeField] private List<GameObject> materialPrefabs;
+    [SerializeField] private List<GameObject> resourcePrefabs; // TODO create better naming to avoid confusion between item, resource, conveyedResource, material, etc
 
     // registries
     [HideInInspector] public Dictionary<string, GameObject> savables = new();
     [HideInInspector] public Dictionary<Materials, GameObject> materials = new();
+    [HideInInspector] public Dictionary<ResourceNode, GameObject> resources = new();
 
     private void Awake()
     {
@@ -43,5 +45,7 @@ public class PrefabRegistries : MonoBehaviour
             Materials material = conveyedResource.materialType;
             materials[material] = prefab;
         }
+
+        // TODO Build the registry using the resource nodes as key
     }
 }

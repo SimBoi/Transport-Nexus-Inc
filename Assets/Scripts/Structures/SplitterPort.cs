@@ -8,7 +8,7 @@ namespace Signals
         public PortNetworkGraph network { get; private set; }
         [SerializeField] public Port port;
 
-        virtual public void Initialize(PortNetworkGraph signalNetworkGraph)
+        virtual public void InitializeSplitterPort(PortNetworkGraph signalNetworkGraph)
         {
             network = signalNetworkGraph;
             port.AddToNetwork(network);

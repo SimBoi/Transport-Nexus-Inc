@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System;
 using UnityEngine.Rendering;
 using System.Linq;
+using Inventories;
 
 public enum ResourceNode
 {
-    iron,
-    coal,
-    none
+    Iron,
+    Coal,
+    None
 }
 
 public enum Biome
@@ -257,13 +258,18 @@ public struct GameObjectArray
 public class ChunksManager : MonoBehaviour
 {
     public static ChunksManager instance { get; private set; }
+    public static Dictionary<ResourceNode, Materials> resourceNodeToMaterial = new()
+    {
+        {ResourceNode.Coal, Materials.Coal},
+        {ResourceNode.Iron, Materials.Iron}
+    };
     [SerializeField] private GameObject chunkPrefab;
     private Stack<Chunk> chunkPool = new();
     private Dictionary<Vector2Int, Chunk> chunks = new();
     [SerializeField] private Transform center;
     private Vector2Int prevCenterChunk;
-    public int generateDistance;
     public int renderDistance;
+    public int generateDistance;
     public int unloadDistance;
     public int seed;
 
@@ -318,7 +324,7 @@ public class ChunksManager : MonoBehaviour
         lushPlainsResourceNodes = new ThreadSafeMesh[lushPlainsResourceNodePrefabs.Length][];
         foreach (ResourceNode node in Enum.GetValues(typeof(ResourceNode)))
         {
-            if (node == ResourceNode.none) continue;
+            if (node == ResourceNode.None) continue;
             int nodeIndex = (int)node;
             lushPlainsResourceNodes[nodeIndex] = new ThreadSafeMesh[lushPlainsResourceNodePrefabs[nodeIndex].Length];
             for (int i = 0; i < lushPlainsResourceNodes[nodeIndex].Length; i++)
@@ -456,5 +462,19 @@ public class ChunksManager : MonoBehaviour
         chunk.Clear();
         chunk.gameObject.SetActive(false);
         chunkPool.Append(chunk);
+    }
+
+    public bool CanBuild(Vector2Int tileCoords)
+    {
+        Vector2Int chunkCoords = Vector2Int.FloorToInt((Vector2)tileCoords / Chunk.size);
+        if (!chunks.ContainsKey(chunkCoords)) return false;
+        return chunks[chunkCoords].CanBuild(tileCoords - chunkCoords * Chunk.size);
+    }
+
+    public ResourceNode GetResourceNode(Vector2Int tileCoords)
+    {
+        Vector2Int chunkCoords = Vector2Int.FloorToInt((Vector2)tileCoords / Chunk.size);
+        if (!chunks.ContainsKey(chunkCoords)) throw new Exception("requested resource node information on unloaded chunk");
+        return chunks[chunkCoords].GetResourceNode(tileCoords - chunkCoords * Chunk.size);
     }
 }

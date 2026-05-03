@@ -68,7 +68,7 @@ namespace Structures
             network = GameManager.Instance.signalNetworkGraph;
         }
 
-        public virtual void Initialize(PortNetworkGraph signalNetworkGraph)
+        public virtual void InitializeSensor(PortNetworkGraph signalNetworkGraph)
         {
             network = signalNetworkGraph;
             outputPort.AddToNetwork(network);
@@ -124,7 +124,7 @@ namespace Structures
             _chainedOutputProcessor = state.Item4 == -1 ? null : (Processor)idLookup[state.Item4];
         }
 
-        public void Initialize(PortNetworkGraph signalNetworkGraph, int delayTicks = 1)
+        public void InitializeProcessor(PortNetworkGraph signalNetworkGraph, int delayTicks = 1)
         {
             network = signalNetworkGraph;
             foreach (Port inputPort in inputPorts) inputPort.AddToNetwork(network);
@@ -222,7 +222,7 @@ namespace Structures
             network = GameManager.Instance.signalNetworkGraph;
         }
 
-        virtual public void Initialize(PortNetworkGraph signalNetworkGraph)
+        virtual public void InitializeActuator(PortNetworkGraph signalNetworkGraph)
         {
             network = signalNetworkGraph;
             foreach (Port inputPort in inputPorts) inputPort.AddToNetwork(network);
@@ -249,7 +249,7 @@ namespace Structures
             network = GameManager.Instance.signalNetworkGraph;
         }
 
-        public void Initialize(PortNetworkGraph signalNetworkGraph)
+        public void InitializeSplitter(PortNetworkGraph signalNetworkGraph)
         {
             network = signalNetworkGraph;
             port.AddToNetwork(network);

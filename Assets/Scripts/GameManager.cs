@@ -13,7 +13,6 @@ public class GameManager : MonoBehaviour
     // Prefab registries
     public List<GameObject> savablePrefabs;
     public Dictionary<string, GameObject> savablesPrefabRegistry = new();
-    public Dictionary<Materials, GameObject> materialsPrefabRegistry = new();
 
     public ulong tick = 0;
     [HideInInspector] public int[] materials = new int[Enum.GetValues(typeof(Materials)).Length];
@@ -214,11 +213,16 @@ public class GameManager : MonoBehaviour
 
     public bool AddStructure(Vector2Int tile, Vector2Int orientation, GameObject structurePrefab)
     {
-        if (_tiles.ContainsKey(tile)) return false;
         int size = structurePrefab.GetComponent<Structure>().size;
         Vector2Int relativeUp = orientation;
         Vector2Int relativeRight = new Vector2Int(relativeUp.y, -relativeUp.x);
-        for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) if (_tiles.ContainsKey(tile + x * relativeRight + y * relativeUp)) return false;
+        for (int x = 0; x < size; x++)
+        for (int y = 0; y < size; y++)
+        {
+            Vector2Int subTile = tile + x * relativeRight + y * relativeUp;
+            if (_tiles.ContainsKey(subTile)) return false;
+            if (!ChunksManager.instance.CanBuild(subTile)) return false;
+        }
 
         Vector3 position = new Vector3(tile.x, 0, tile.y);
         Quaternion rotation = Quaternion.LookRotation(new Vector3(orientation.x, 0, orientation.y), Vector3.up);
@@ -235,7 +239,11 @@ public class GameManager : MonoBehaviour
                     _machines.Add(tile + x * relativeRight + y * relativeUp, machine);
                     _actuators.Add(tile + x * relativeRight + y * relativeUp, machine);
                 }
-            machine.Initialize(signalNetworkGraph);
+            machine.InitializeActuator(signalNetworkGraph);
+            if (machine is ResourceExtractor resourceExtractor)
+            {
+                resourceExtractor.resourceNode = ChunksManager.instance.GetResourceNode(tile);
+            }
         }
         else if (instantiatedStructure is DynamicRail dynamicRail)
         {
@@ -249,7 +257,7 @@ public class GameManager : MonoBehaviour
                     _rails.Add(tile + x * relativeRight + y * relativeUp, sensorRail);
                     _sensors.Add(tile + x * relativeRight + y * relativeUp, sensorRail);
                 }
-            sensorRail.Initialize(signalNetworkGraph);
+            sensorRail.InitializeSensor(signalNetworkGraph);
             ConnectRail(tile);
         }
         else if (instantiatedStructure is ActuatorRail actuatorRail)
@@ -259,7 +267,7 @@ public class GameManager : MonoBehaviour
                     _rails.Add(tile + x * relativeRight + y * relativeUp, actuatorRail);
                     _actuators.Add(tile + x * relativeRight + y * relativeUp, actuatorRail);
                 }
-            actuatorRail.Initialize(signalNetworkGraph);
+            actuatorRail.InitializeActuator(signalNetworkGraph);
             ConnectRail(tile);
         }
         else if (instantiatedStructure is DynamicConveyorBelt dynamicConveyor)
@@ -274,7 +282,7 @@ public class GameManager : MonoBehaviour
                     _conveyors.Add(tile + x * relativeRight + y * relativeUp, sensorConveyor);
                     _sensors.Add(tile + x * relativeRight + y * relativeUp, sensorConveyor);
                 }
-            sensorConveyor.Initialize(signalNetworkGraph);
+            sensorConveyor.InitializeSensor(signalNetworkGraph);
             ConnectConveyor(tile);
         }
         else if (instantiatedStructure is ActuatorConveyorBelt actuatorConveyor)
@@ -284,18 +292,18 @@ public class GameManager : MonoBehaviour
                     _conveyors.Add(tile + x * relativeRight + y * relativeUp, actuatorConveyor);
                     _actuators.Add(tile + x * relativeRight + y * relativeUp, actuatorConveyor);
                 }
-            actuatorConveyor.Initialize(signalNetworkGraph);
+            actuatorConveyor.InitializeActuator(signalNetworkGraph);
             ConnectConveyor(tile);
         }
         else if (instantiatedStructure is Sensor sensor)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _sensors.Add(tile + x * relativeRight + y * relativeUp, sensor);
-            sensor.Initialize(signalNetworkGraph);
+            sensor.InitializeSensor(signalNetworkGraph);
         }
         else if (instantiatedStructure is Processor processor)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _processors.Add(tile + x * relativeRight + y * relativeUp, processor);
-            processor.Initialize(signalNetworkGraph);
+            processor.InitializeProcessor(signalNetworkGraph);
 
             // chain input and output processors
             Vector2Int behindTile = tile - orientation;
@@ -320,12 +328,12 @@ public class GameManager : MonoBehaviour
         else if (instantiatedStructure is Actuator actuator)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _actuators.Add(tile + x * relativeRight + y * relativeUp, actuator);
-            actuator.Initialize(signalNetworkGraph);
+            actuator.InitializeActuator(signalNetworkGraph);
         }
         else if (instantiatedStructure is SplitterPort splitterPort)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _splitterPorts.Add(tile + x * relativeRight + y * relativeUp, splitterPort);
-            splitterPort.Initialize(signalNetworkGraph);
+            splitterPort.InitializeSplitterPort(signalNetworkGraph);
         }
         else
         {
