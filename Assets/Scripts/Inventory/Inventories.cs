@@ -4,6 +4,7 @@ using System;
 
 namespace Inventories
 {
+    // TODO switch to scriptable objects for dynamically loading gameplay data instead of recompiling the game
     [Serializable]
     public enum Materials
     {

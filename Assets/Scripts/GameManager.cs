@@ -6,6 +6,8 @@ using System;
 using Inventories;
 using UnityEditor;
 
+// TODO: refactor into sub-managers to reduce complexity of the GameManager
+// TODO: add event based subsciptions and interactions to potentially reduce complexity
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }

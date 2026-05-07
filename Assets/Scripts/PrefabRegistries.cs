@@ -7,9 +7,9 @@ public class PrefabRegistries : MonoBehaviour
     public static PrefabRegistries Instance { get; private set; }
 
     // prefabs
-    [SerializeField] private List<GameObject> savablePrefabs; // TODO clean up duplicate registries in the code base
+    [SerializeField] private List<GameObject> savablePrefabs;
     [SerializeField] private List<GameObject> materialPrefabs;
-    [SerializeField] private List<GameObject> resourcePrefabs; // TODO create better naming to avoid confusion between item, resource, conveyedResource, material, etc
+    [SerializeField] private List<GameObject> resourcePrefabs;
 
     // registries
     [HideInInspector] public Dictionary<string, GameObject> savables = new();

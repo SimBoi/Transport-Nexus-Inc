@@ -12,6 +12,7 @@ namespace Inventories
         Cart
     }
 
+    // TODO refactor into a definion serializable object and a runtime object to avoid unnecessary multiple monobehaviours
     [Serializable]
     public class Item : MonoBehaviour
     {
