@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Inventories
 {
     [Serializable]
-    public enum ItemType
+    public enum BuildableEntityType
     {
         Structure,
         Locomotive,
@@ -14,63 +14,63 @@ namespace Inventories
 
     // TODO refactor into a definion serializable object and a runtime object to avoid unnecessary multiple monobehaviours
     [Serializable]
-    public class Item : MonoBehaviour
+    public class BuildableEntity : MonoBehaviour
     {
-        public string itemName;
+        public string entityName;
         public Sprite icon;
-        public ItemType type;
-        [HideInInspector] public int[] materialCosts = new int[Enum.GetValues(typeof(Materials)).Length];
+        public BuildableEntityType type;
+        [HideInInspector] public int[] resourceCosts = new int[Enum.GetValues(typeof(ResourceType)).Length];
 
         public bool Place(Vector3 position, Vector2Int placementOrientation, Collider collider)
         {
-            if (!GameManager.Instance.HasMaterials(materialCosts)) return false;
+            if (!GameManager.Instance.HasResources(resourceCosts)) return false;
 
-            if (type == ItemType.Structure)
+            if (type == BuildableEntityType.Structure)
             {
                 Vector2Int tile = GameManager.Vector3ToTile(position);
                 if (!GameManager.Instance.AddStructure(tile, placementOrientation, gameObject)) return false;
             }
-            else if (type == ItemType.Locomotive)
+            else if (type == BuildableEntityType.Locomotive)
             {
                 Vector2Int tile = GameManager.Vector3ToTile(position);
                 if (!GameManager.Instance.BuildTrain(tile)) return false;
             }
-            else if (type == ItemType.Cart)
+            else if (type == BuildableEntityType.Cart)
             {
                 Train train = collider.GetComponentInParent<Train>();
                 if (train == null || !train.AddCart(gameObject)) return false;
             }
 
-            GameManager.Instance.SpendMaterials(materialCosts);
+            GameManager.Instance.SpendResources(resourceCosts);
             return true;
         }
 
         public void Destroy()
         {
-            GameManager.Instance.AddMaterials(materialCosts);
+            GameManager.Instance.AddResources(resourceCosts);
             Destroy(gameObject);
         }
     }
 
-    [CustomEditor(typeof(Item))]
-    public class ItemEditor : Editor
+    [CustomEditor(typeof(BuildableEntity))]
+    public class BuildableEntityEditor : Editor
     {
         public override void OnInspectorGUI()
         {
-            Item item = (Item)target;
+            BuildableEntity buildableEntity = (BuildableEntity)target;
 
             // Draw the default inspector
             DrawDefaultInspector();
 
-            // Custom display for materialCosts array
+            // Custom display for resourceCosts array
             EditorGUILayout.Space();
-            if (item.materialCosts != null && item.materialCosts.Length > 0)
+            if (buildableEntity.resourceCosts != null && buildableEntity.resourceCosts.Length > 0)
             {
-                EditorGUILayout.LabelField("Material Costs", EditorStyles.boldLabel);
-                for (int i = 0; i < item.materialCosts.Length; i++)
+                EditorGUILayout.LabelField("Resource Costs", EditorStyles.boldLabel);
+                for (int i = 0; i < buildableEntity.resourceCosts.Length; i++)
                 {
                     EditorGUILayout.BeginHorizontal();
-                    item.materialCosts[i] = EditorGUILayout.IntField(((Materials)i).ToString(), item.materialCosts[i]);
+                    buildableEntity.resourceCosts[i] = EditorGUILayout.IntField(((ResourceType)i).ToString(), buildableEntity.resourceCosts[i]);
                     EditorGUILayout.EndHorizontal();
                 }
             }

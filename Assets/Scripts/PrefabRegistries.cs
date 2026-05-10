@@ -8,13 +8,11 @@ public class PrefabRegistries : MonoBehaviour
 
     // prefabs
     [SerializeField] private List<GameObject> savablePrefabs;
-    [SerializeField] private List<GameObject> materialPrefabs;
     [SerializeField] private List<GameObject> resourcePrefabs;
 
     // registries
     [HideInInspector] public Dictionary<string, GameObject> savables = new();
-    [HideInInspector] public Dictionary<Materials, GameObject> materials = new();
-    [HideInInspector] public Dictionary<ResourceNode, GameObject> resources = new();
+    [HideInInspector] public Dictionary<ResourceType, GameObject> resources = new();
 
     private void Awake()
     {
@@ -33,17 +31,17 @@ public class PrefabRegistries : MonoBehaviour
             savables[savable.TypeName] = prefab;
         }
 
-        // Build the registry using the material type as key
-        foreach (GameObject prefab in materialPrefabs)
+        // Build the registry using the resource type as key
+        foreach (GameObject prefab in resourcePrefabs)
         {
-            ConveyedResource conveyedResource = prefab.GetComponent<ConveyedResource>();
-            if (conveyedResource == null)
+            ResourceEntity resource = prefab.GetComponent<ResourceEntity>();
+            if (resource == null)
             {
-                Debug.LogError($"Prefab {prefab.name} does not have a ConveyedResource component.");
+                Debug.LogError($"Prefab {prefab.name} does not have a ResourceEntity component.");
                 continue;
             }
-            Materials material = conveyedResource.materialType;
-            materials[material] = prefab;
+            ResourceType resourceType = resource.resourceType;
+            resources[resourceType] = prefab;
         }
 
         // TODO Build the registry using the resource nodes as key

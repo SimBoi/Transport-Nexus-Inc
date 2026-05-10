@@ -52,7 +52,7 @@ public class SaveData
 
     // GameManger state
     public ulong tick;
-    public int[] materials;
+    public int[] resources;
     public List<(Vector2Int tile, Vector2Int orientation, int structureId)> tiles = new();
     public List<(int port1Id, int port2Id)> portConnections = new();
     public List<int> channelIds = new();
@@ -132,7 +132,7 @@ public class SaveManager : MonoBehaviour
             idLookup[entry.id].ID = entry.id;
 
             // save the prefab for structures
-            var structure = obj.GetComponent<Structures.Structure>();
+            var structure = obj.GetComponent<Structures.StructureEntity>();
             if (structure != null) structure.prefab = PrefabRegistries.Instance.savables[entry.type];
         }
 

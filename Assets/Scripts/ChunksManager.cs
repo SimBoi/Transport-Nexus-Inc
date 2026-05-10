@@ -258,10 +258,10 @@ public struct GameObjectArray
 public class ChunksManager : MonoBehaviour
 {
     public static ChunksManager instance { get; private set; }
-    public static Dictionary<ResourceNode, Materials> resourceNodeToMaterial = new()
+    public static Dictionary<ResourceNode, ResourceType> resourceNodeToMaterial = new() // TODO
     {
-        {ResourceNode.Coal, Materials.Coal},
-        {ResourceNode.Iron, Materials.Iron}
+        {ResourceNode.Coal, ResourceType.Coal},
+        {ResourceNode.Iron, ResourceType.Iron}
     };
     [SerializeField] private GameObject chunkPrefab;
     private Stack<Chunk> chunkPool = new();

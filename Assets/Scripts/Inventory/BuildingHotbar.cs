@@ -6,17 +6,17 @@ using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class InventorySlot : MonoBehaviour
+public class BuildingHotbarSlot : MonoBehaviour
 {
     [SerializeField] private TMP_Text _text;
     [SerializeField] private Image _image;
     [SerializeField] private Button _button;
 
-    public void Initialize(Item item, UnityAction SelectItem, List<EventTrigger.Entry> eventTriggers = null)
+    public void Initialize(BuildableEntity buildableEntity, UnityAction SelectBuildableEntity, List<EventTrigger.Entry> eventTriggers = null)
     {
-        _text.text = item.itemName;
-        _image.sprite = item.icon;
-        _button.onClick.AddListener(SelectItem);
+        _text.text = buildableEntity.entityName;
+        _image.sprite = buildableEntity.icon;
+        _button.onClick.AddListener(SelectBuildableEntity);
 
         if (eventTriggers != null)
         {

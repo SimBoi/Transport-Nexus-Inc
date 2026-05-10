@@ -65,7 +65,7 @@ public class CargoExchange : Machine
                 {
                     if (cargoCart.train.speed > 0) continue;
 
-                    ConveyedResource resourceToPickup = cargoCart.TryOutputResource();
+                    ResourceEntity resourceToPickup = cargoCart.TryOutputResource();
                     if (resourceToPickup == null) continue;
                     inputResources[channel][i] = resourceToPickup;
                     resourceToPickup.EnterInventory();
@@ -83,7 +83,7 @@ public class CargoExchange : Machine
         {
             for (int i = 0; i < numberOfOutputs[channel]; i++)
             {
-                ConveyedResource resource = outputResources[channel][i];
+                ResourceEntity resource = outputResources[channel][i];
                 if (resource == null) continue;
 
                 Vector2Int funnelTile = GameManager.Vector3ToTile(outputFunnels[channel].transform.position);

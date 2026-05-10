@@ -8,8 +8,8 @@ using Inventories;
 
 public class Hotbar : MonoBehaviour
 {
-    [SerializeField] private List<Item> hotbar = new();
-    private int selectedItemindex;
+    [SerializeField] private List<BuildableEntity> hotbar = new();
+    private int selectedBuildableEntityindex;
 
     [Header("Hotbar UI")]
     [SerializeField] private GameObject expanded;
@@ -17,10 +17,10 @@ public class Hotbar : MonoBehaviour
     [SerializeField] private GameObject hotbarSlotPrefab;
     [SerializeField] private int spacing = 50;
 
-    [Header("Item Placement")]
+    [Header("Slot Placement")]
     private GameObject selectedSlot = null;
     private bool isPointerInsideSelectedSlot = false;
-    private GameObject draggedItem = null;
+    private GameObject draggedBuildableEntity = null;
     public Vector2Int placementOrientation = Vector2Int.up;
 
     private void Start()
@@ -33,47 +33,47 @@ public class Hotbar : MonoBehaviour
         Canvas canvas = gameObject.GetComponentInParent<Canvas>();
         for (int i = 0; i < hotbar.Count; i++)
         {
-            Item item = hotbar[i];
+            BuildableEntity buildableEntity = hotbar[i];
             Vector3 position = expanded.transform.position + new Vector3(i * spacing * canvas.scaleFactor, 0, 0);
             GameObject slot = Instantiate(hotbarSlotPrefab, position, Quaternion.identity, expanded.transform);
             int index = i;
-            slot.GetComponent<InventorySlot>().Initialize(item, () => SelectItem(index));
+            slot.GetComponent<BuildingHotbarSlot>().Initialize(buildableEntity, () => SelectBuildableEntity(index));
         }
     }
 
-    public void SelectItem(int index)
+    public void SelectBuildableEntity(int index)
     {
-        selectedItemindex = index;
+        selectedBuildableEntityindex = index;
 
-        // update the selected item ui
+        // update the selected buildable entity ui
         if (selectedSlot != null) Destroy(selectedSlot);
         selectedSlot = Instantiate(hotbarSlotPrefab, collapsed.transform.position, Quaternion.identity, collapsed.transform);
 
-        // add event triggers to the selected item ui
+        // add event triggers to the selected buildable entity ui
         EventTrigger.Entry pointerExitEvent = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit, callback = new EventTrigger.TriggerEvent() };
         EventTrigger.Entry pointerEnterEvent = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter, callback = new EventTrigger.TriggerEvent() };
         EventTrigger.Entry dragEvent = new EventTrigger.Entry { eventID = EventTriggerType.Drag, callback = new EventTrigger.TriggerEvent() };
         EventTrigger.Entry endDragEvent = new EventTrigger.Entry { eventID = EventTriggerType.EndDrag, callback = new EventTrigger.TriggerEvent() };
-        pointerExitEvent.callback.AddListener(PointerExitSelectedItem);
-        pointerEnterEvent.callback.AddListener(PointerEnterSelectedItem);
-        dragEvent.callback.AddListener(DragSelectedItem);
-        endDragEvent.callback.AddListener(EndDragSelectedItem);
+        pointerExitEvent.callback.AddListener(PointerExitSelectedBuildableEntity);
+        pointerEnterEvent.callback.AddListener(PointerEnterSelectedBuildableEntity);
+        dragEvent.callback.AddListener(DragSelectedBuildableEntity);
+        endDragEvent.callback.AddListener(EndDragSelectedBuildableEntity);
         List<EventTrigger.Entry> eventTriggers = new List<EventTrigger.Entry> { pointerExitEvent, pointerEnterEvent, dragEvent, endDragEvent };
 
-        // initialize the selected item ui
-        selectedSlot.GetComponent<InventorySlot>().Initialize(hotbar[index], ExpandHotbar, eventTriggers);
+        // initialize the selected buildable entity ui
+        selectedSlot.GetComponent<BuildingHotbarSlot>().Initialize(hotbar[index], ExpandHotbar, eventTriggers);
 
-        // Instantiate the dragged item
-        if (draggedItem != null) Destroy(draggedItem);
-        draggedItem = Instantiate(hotbar[index].gameObject, Vector3.zero, Quaternion.identity);
-        // set the dragged item and all its children layer to ignore raycast
-        InitDraggedItemRecursively(draggedItem);
-        draggedItem.SetActive(false);
+        // Instantiate the dragged buildable entity
+        if (draggedBuildableEntity != null) Destroy(draggedBuildableEntity);
+        draggedBuildableEntity = Instantiate(hotbar[index].gameObject, Vector3.zero, Quaternion.identity);
+        // set the dragged buildable entity and all its children layer to ignore raycast
+        InitDraggedBuildableEntityRecursively(draggedBuildableEntity);
+        draggedBuildableEntity.SetActive(false);
 
         CollapseHotbar();
     }
 
-    private void InitDraggedItemRecursively(GameObject obj)
+    private void InitDraggedBuildableEntityRecursively(GameObject obj)
     {
         obj.layer = LayerMask.NameToLayer("Ignore Raycast");
 
@@ -81,7 +81,7 @@ public class Hotbar : MonoBehaviour
         foreach (Transform child in obj.transform)
         {
             if (child == null) continue;
-            InitDraggedItemRecursively(child.gameObject);
+            InitDraggedBuildableEntityRecursively(child.gameObject);
         }
 
         // Get all components except Transform, MeshRenderer, and MeshFilter
@@ -95,51 +95,51 @@ public class Hotbar : MonoBehaviour
         }
     }
 
-    public void PointerExitSelectedItem(BaseEventData data)
+    public void PointerExitSelectedBuildableEntity(BaseEventData data)
     {
         isPointerInsideSelectedSlot = false;
     }
 
-    public void PointerEnterSelectedItem(BaseEventData data)
+    public void PointerEnterSelectedBuildableEntity(BaseEventData data)
     {
         isPointerInsideSelectedSlot = true;
     }
 
-    public void DragSelectedItem(BaseEventData data)
+    public void DragSelectedBuildableEntity(BaseEventData data)
     {
         if (isPointerInsideSelectedSlot)
         {
-            if (draggedItem.activeSelf) draggedItem.SetActive(false);
+            if (draggedBuildableEntity.activeSelf) draggedBuildableEntity.SetActive(false);
         }
         else
         {
-            if (!draggedItem.activeSelf)
+            if (!draggedBuildableEntity.activeSelf)
             {
                 GameManager.Instance.Unfocus();
-                draggedItem.SetActive(true);
+                draggedBuildableEntity.SetActive(true);
             }
 
-            // move the dragged item with the pointer
+            // move the dragged buildable entity with the pointer
             Ray ray = Camera.main.ScreenPointToRay(((PointerEventData)data).position);
             if (Physics.Raycast(ray, out RaycastHit result))
             {
-                draggedItem.transform.position = result.point;
+                draggedBuildableEntity.transform.position = result.point;
             }
         }
     }
 
-    public void EndDragSelectedItem(BaseEventData data)
+    public void EndDragSelectedBuildableEntity(BaseEventData data)
     {
-        // check if the dragging stopped outside the selected item ui and place the item on the ground
+        // check if the dragging stopped outside the selected buildable entity ui and place it on the ground
         if (isPointerInsideSelectedSlot) return;
-        draggedItem.SetActive(false);
+        draggedBuildableEntity.SetActive(false);
 
         PointerEventData pointerData = (PointerEventData)data;
         Ray ray = Camera.main.ScreenPointToRay(pointerData.position);
         if (Physics.Raycast(ray, out RaycastHit result))
         {
             Vector3 hitPoint = result.point + result.normal * 0.01f;
-            hotbar[selectedItemindex].Place(hitPoint, placementOrientation, result.collider);
+            hotbar[selectedBuildableEntityindex].Place(hitPoint, placementOrientation, result.collider);
         }
     }
 

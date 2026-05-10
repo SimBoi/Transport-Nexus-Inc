@@ -29,7 +29,7 @@ public class ConveyorBeltTIntersection : ActuatorConveyorBelt
         OrientBelt();
     }
 
-    public override Vector2Int GetNextExitOrientation(ConveyedResource resource)
+    public override Vector2Int GetNextExitOrientation(ResourceEntity resource)
     {
         return isRightTurn ? new Vector2Int(orientation.y, -orientation.x) : new Vector2Int(-orientation.y, orientation.x);
     }

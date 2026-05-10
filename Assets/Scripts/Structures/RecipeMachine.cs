@@ -12,19 +12,19 @@ public class RecipeMachine : Machine
 
     private int currentRecipeIndex = -1;
     private int currentProcessingTicks = 0;
-    private List<ConveyedResource> ingredientResources;
-    private List<ConveyedResource>[] producedResources;
+    private List<ResourceEntity> ingredientResources;
+    private List<ResourceEntity>[] producedResources;
 
     public override string TypeName => GetType().ToString() + recipeBook.HashBook().ToString();
 
     public override void Awake()
     {
         base.Awake();
-        ingredientResources = new List<ConveyedResource>();
-        producedResources = new List<ConveyedResource>[numberOfOutputs.Length];
+        ingredientResources = new List<ResourceEntity>();
+        producedResources = new List<ResourceEntity>[numberOfOutputs.Length];
         for (int i = 0; i < producedResources.Length; i++)
         {
-            producedResources[i] = new List<ConveyedResource>();
+            producedResources[i] = new List<ResourceEntity>();
         }
     }
 
@@ -50,10 +50,10 @@ public class RecipeMachine : Machine
         var state = JsonConvert.DeserializeObject<(int, int, List<int>, List<int>[])>(combinedState.inheritedState);
         currentRecipeIndex = state.Item1;
         currentProcessingTicks = state.Item2;
-        ingredientResources = state.Item3.ConvertAll(id => idLookup[id] as ConveyedResource);
+        ingredientResources = state.Item3.ConvertAll(id => idLookup[id] as ResourceEntity);
         for (int i = 0; i < producedResources.Length; i++)
         {
-            producedResources[i] = state.Item4[i].ConvertAll(id => idLookup[id] as ConveyedResource);
+            producedResources[i] = state.Item4[i].ConvertAll(id => idLookup[id] as ResourceEntity);
         }
     }
 
@@ -76,7 +76,7 @@ public class RecipeMachine : Machine
         // if there are no products in the producedResources list, try to start a new recipe
         if (currentRecipeIndex == -1)
         {
-            foreach (List<ConveyedResource> r in producedResources) if (r.Count > 0) return;
+            foreach (List<ResourceEntity> r in producedResources) if (r.Count > 0) return;
             StartRecipe();
         }
     }
@@ -97,9 +97,9 @@ public class RecipeMachine : Machine
                 int ingredientAmount = 0;
                 for (int i = 0; i < inputResources[ingredient.channel].Length && ingredientAmount < ingredient.amount; i++)
                 {
-                    ConveyedResource resource = inputResources[ingredient.channel][i];
+                    ResourceEntity resource = inputResources[ingredient.channel][i];
                     if (resource == null) continue;
-                    if (ingredient.materialType != resource.materialType) continue;
+                    if (ingredient.resourceType != resource.resourceType) continue;
                     ingredientResources.Add(resource);
                     inputResources[ingredient.channel][i] = null;
                     ingredientAmount++;
@@ -111,17 +111,17 @@ public class RecipeMachine : Machine
     public void FinishRecipe()
     {
         // destroy the processed resources
-        foreach (ConveyedResource resource in ingredientResources) resource.DestroyResource();
+        foreach (ResourceEntity resource in ingredientResources) resource.DestroyResource();
         ingredientResources.Clear();
 
         // convert to products
         RecipeBook.Recipe recipe = recipeBook.list[currentRecipeIndex];
         foreach (RecipeBook.Ingredient product in recipe.products)
         {
-            GameObject prefab = PrefabRegistries.Instance.materials[product.materialType];
+            GameObject prefab = PrefabRegistries.Instance.resources[product.resourceType];
             for (int i = 0; i < product.amount; i++)
             {
-                ConveyedResource resource = Instantiate(prefab, transform.position, Quaternion.identity).GetComponent<ConveyedResource>();
+                ResourceEntity resource = Instantiate(prefab, transform.position, Quaternion.identity).GetComponent<ResourceEntity>();
                 resource.EnterInventory();
                 producedResources[product.channel].Add(resource);
             }
@@ -134,10 +134,10 @@ public class RecipeMachine : Machine
     {
         base.DropInventory();
 
-        foreach (ConveyedResource r in ingredientResources) if (r != null) r.ExitInventory(transform.position);
-        foreach (List<ConveyedResource> channel in producedResources) foreach (ConveyedResource r in channel) if (r != null) r.ExitInventory(transform.position);
+        foreach (ResourceEntity r in ingredientResources) if (r != null) r.ExitInventory(transform.position);
+        foreach (List<ResourceEntity> channel in producedResources) foreach (ResourceEntity r in channel) if (r != null) r.ExitInventory(transform.position);
 
         ingredientResources.Clear();
-        foreach (List<ConveyedResource> channel in producedResources) channel.Clear();
+        foreach (List<ResourceEntity> channel in producedResources) channel.Clear();
     }
 }

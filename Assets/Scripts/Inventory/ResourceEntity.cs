@@ -7,10 +7,10 @@ using UnityEngine.EventSystems;
 
 namespace Inventories
 {
-    public class ConveyedResource : MonoBehaviour, ISavable
+    public class ResourceEntity : MonoBehaviour, ISavable
     {
-        public Materials materialType;
-        [SerializeField] private float resourceRadius = 0.2f; // the radius of the resource for collision detection
+        public ResourceType resourceType;
+        [SerializeField] private float resourceEntityRadius = 0.2f; // the radius of the resource for collision detection
         [SerializeField] private GameObject model;
         private Vector2Int tile; // the tile the resource is on
         private List<Vector3> pathHalfSegments = new(3); // the 3d points defining the half segments along the path
@@ -30,7 +30,7 @@ namespace Inventories
             set => _id = value;
         }
 
-        public string TypeName => GetType().ToString() + materialType.ToString();
+        public string TypeName => GetType().ToString() + resourceType.ToString();
 
         public bool ShouldInstantiateOnLoad() => true;
 
@@ -70,7 +70,7 @@ namespace Inventories
         public bool TryEnterConveyPath(Vector2Int tile)
         {
             // check if a conveyor belt has been placed under the resource
-            List<ConveyedResource> resourcesOnTile = GameManager.Instance.GetConveyorResources(tile);
+            List<ResourceEntity> resourcesOnTile = GameManager.Instance.GetConveyorResources(tile);
             if (resourcesOnTile == null) return false;
 
             // check if the resource will overlap with other resources on the center of the tile
@@ -107,7 +107,7 @@ namespace Inventories
             TryEnterConveyPath(GameManager.Vector3ToTile(transform.position));
         }
 
-        public void Convey(float speed, List<ConveyedResource> resourcesOnTile, List<ConveyedResource> resourcesOnNextTile)
+        public void Convey(float speed, List<ResourceEntity> resourcesOnTile, List<ResourceEntity> resourcesOnNextTile)
         {
             // find the new interpolated position of the resource
             float newInterpolation = interpolation + speed * Time.deltaTime;
@@ -129,10 +129,10 @@ namespace Inventories
             }
         }
 
-        public bool IsOverlappingWith(Vector3 newPosition, List<ConveyedResource> others)
+        public bool IsOverlappingWith(Vector3 newPosition, List<ResourceEntity> others)
         {
             if (others == null) return false;
-            foreach (ConveyedResource otherResource in others)
+            foreach (ResourceEntity otherResource in others)
             {
                 if (otherResource == this) continue;
                 if (IsOverlappingWith(newPosition, otherResource)) return true;
@@ -140,11 +140,11 @@ namespace Inventories
             return false;
         }
 
-        public bool IsOverlappingWith(Vector3 newPosition, ConveyedResource other)
+        public bool IsOverlappingWith(Vector3 newPosition, ResourceEntity other)
         {
             // return Vector3.Distance(newPosition, other.transform.position) < resourceRadius; // L2 distance
             float dist = Mathf.Abs(newPosition.x - other.transform.position.x) + Mathf.Abs(newPosition.z - other.transform.position.z);
-            bool result = dist < resourceRadius;
+            bool result = dist < resourceEntityRadius;
             return result;
         }
 

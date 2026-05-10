@@ -9,7 +9,7 @@ using NUnit.Framework;
 
 namespace Structures
 {
-    public class Structure : MonoBehaviour, ISavable
+    public class StructureEntity : MonoBehaviour, ISavable
     {
         public int size = 1; // structure extends in +x and +y direction
         [HideInInspector] public Vector2Int tile = Vector2Int.zero; // the tile the structure is on, if size > 1, this is the bottom left tile relative to the orientation
@@ -57,7 +57,7 @@ namespace Structures
         }
     }
 
-    public class Sensor : Structure
+    public class Sensor : StructureEntity
     {
         public PortNetworkGraph network { get; private set; }
         [SerializeField] public Port outputPort;
@@ -82,7 +82,7 @@ namespace Structures
         protected virtual float ReadSensor() { return 0; }
     }
 
-    public class Processor : Structure
+    public class Processor : StructureEntity
     {
         public PortNetworkGraph network { get; private set; }
         [SerializeField] public Port[] inputPorts;
@@ -211,7 +211,7 @@ namespace Structures
         }
     }
 
-    public class Actuator : Structure
+    public class Actuator : StructureEntity
     {
         public PortNetworkGraph network { get; private set; }
         [SerializeField] public Port[] inputPorts;
@@ -238,7 +238,7 @@ namespace Structures
         protected virtual void WriteActuator(float[] inputSignals) { }
     }
 
-    public class Splitter : Structure
+    public class Splitter : StructureEntity
     {
         public PortNetworkGraph network { get; private set; }
         [SerializeField] public Port port;
@@ -257,7 +257,7 @@ namespace Structures
     }
 
     // base structure class for all structures that can connect with nearby structures
-    public class ConnectableStructure : Structure
+    public class ConnectableStructure : StructureEntity
     {
         public List<Vector2Int> connections { get; private set; } = new List<Vector2Int>(2); // connections to other structures by direction
 
@@ -496,7 +496,7 @@ namespace Structures
     {
         public float speed = 1f;
         public Vector2Int exitOrientation;
-        public List<ConveyedResource> resources { get; private set; } = new List<ConveyedResource>(2);
+        public List<ResourceEntity> resources { get; private set; } = new List<ResourceEntity>(2);
 
         public override string GetStateJson()
         {
@@ -524,8 +524,8 @@ namespace Structures
 
             speed = state.Item1;
             exitOrientation = new Vector2Int(state.Item2.Item1, state.Item2.Item2);
-            resources = new List<ConveyedResource>(state.Item3.Length);
-            foreach (int resourceId in state.Item3) resources.Add((ConveyedResource)idLookup[resourceId]);
+            resources = new List<ResourceEntity>(state.Item3.Length);
+            foreach (int resourceId in state.Item3) resources.Add((ResourceEntity)idLookup[resourceId]);
 
             OnOrientConveyorBelt();
         }
@@ -533,7 +533,7 @@ namespace Structures
         public void Update()
         {
             Vector2Int nextTile = tile + exitOrientation;
-            List<ConveyedResource> nextTileResources = GameManager.Instance.GetConveyorResources(nextTile);
+            List<ResourceEntity> nextTileResources = GameManager.Instance.GetConveyorResources(nextTile);
             for (int i = resources.Count - 1; i >= 0; i--) resources[i].Convey(speed, resources, nextTileResources);
         }
 
@@ -559,18 +559,18 @@ namespace Structures
             else if (connections.Count == 1) exitOrientation = orientation;
 
             // update resources interpolation
-            foreach (ConveyedResource resource in resources) resource.NewPath(orientation, exitOrientation);
+            foreach (ResourceEntity resource in resources) resource.NewPath(orientation, exitOrientation);
 
             OnOrientConveyorBelt();
         }
 
-        public void ResourceEnter(ConveyedResource resource)
+        public void ResourceEnter(ResourceEntity resource)
         {
             if (resources.Contains(resource)) throw new Exception("Resource already on conveyor belt.");
             resources.Add(resource);
         }
 
-        public void ResourceExit(ConveyedResource resource)
+        public void ResourceExit(ResourceEntity resource)
         {
             if (!resources.Contains(resource)) throw new Exception("Resource not on conveyor belt.");
             resources.Remove(resource);
@@ -582,7 +582,7 @@ namespace Structures
     public class SensorConveyorBelt : Sensor
     {
         public float speed = 1f;
-        public List<ConveyedResource> resources { get; private set; } = new List<ConveyedResource>(2);
+        public List<ResourceEntity> resources { get; private set; } = new List<ResourceEntity>(2);
 
         public override string GetStateJson()
         {
@@ -607,8 +607,8 @@ namespace Structures
             )>(combinedState.inheritedState);
 
             speed = state.Item1;
-            resources = new List<ConveyedResource>(state.Item2.Length);
-            foreach (int resourceId in state.Item2) resources.Add((ConveyedResource)idLookup[resourceId]);
+            resources = new List<ResourceEntity>(state.Item2.Length);
+            foreach (int resourceId in state.Item2) resources.Add((ResourceEntity)idLookup[resourceId]);
         }
 
         public void Update()
@@ -616,12 +616,12 @@ namespace Structures
             for (int i = resources.Count - 1; i >= 0; i--)
             {
                 Vector2Int nextTile = tile + GetNextExitOrientation(resources[i]);
-                List<ConveyedResource> nextTileResources = GameManager.Instance.GetConveyorResources(nextTile);
+                List<ResourceEntity> nextTileResources = GameManager.Instance.GetConveyorResources(nextTile);
                 resources[i].Convey(speed, resources, nextTileResources);
             }
         }
 
-        public virtual Vector2Int GetNextExitOrientation(ConveyedResource resource)
+        public virtual Vector2Int GetNextExitOrientation(ResourceEntity resource)
         {
             return orientation;
         }
@@ -631,28 +631,28 @@ namespace Structures
             return new List<Vector2Int>(1) { orientation };
         }
 
-        public void ResourceEnter(ConveyedResource resource)
+        public void ResourceEnter(ResourceEntity resource)
         {
             if (resources.Contains(resource)) throw new System.Exception("Resource already on conveyor belt.");
             resources.Add(resource);
             OnResourceEnter(resource);
         }
 
-        public void ResourceExit(ConveyedResource resource)
+        public void ResourceExit(ResourceEntity resource)
         {
             if (!resources.Contains(resource)) throw new System.Exception("Resource not on conveyor belt.");
             resources.Remove(resource);
             OnResourceExit(resource);
         }
 
-        public virtual void OnResourceEnter(ConveyedResource resource) { }
-        public virtual void OnResourceExit(ConveyedResource resource) { }
+        public virtual void OnResourceEnter(ResourceEntity resource) { }
+        public virtual void OnResourceExit(ResourceEntity resource) { }
     }
 
     public class ActuatorConveyorBelt : Actuator
     {
         public float speed = 1f;
-        public List<ConveyedResource> resources { get; private set; } = new List<ConveyedResource>(2);
+        public List<ResourceEntity> resources { get; private set; } = new List<ResourceEntity>(2);
 
         public override string GetStateJson()
         {
@@ -677,8 +677,8 @@ namespace Structures
             )>(combinedState.inheritedState);
 
             speed = state.Item1;
-            resources = new List<ConveyedResource>(state.Item2.Length);
-            foreach (int resourceId in state.Item2) resources.Add((ConveyedResource)idLookup[resourceId]);
+            resources = new List<ResourceEntity>(state.Item2.Length);
+            foreach (int resourceId in state.Item2) resources.Add((ResourceEntity)idLookup[resourceId]);
         }
 
         public void Update()
@@ -686,12 +686,12 @@ namespace Structures
             for (int i = resources.Count - 1; i >= 0; i--)
             {
                 Vector2Int nextTile = tile + GetNextExitOrientation(resources[i]);
-                List<ConveyedResource> nextTileResources = GameManager.Instance.GetConveyorResources(nextTile);
+                List<ResourceEntity> nextTileResources = GameManager.Instance.GetConveyorResources(nextTile);
                 resources[i].Convey(speed, resources, nextTileResources);
             }
         }
 
-        public virtual Vector2Int GetNextExitOrientation(ConveyedResource resource)
+        public virtual Vector2Int GetNextExitOrientation(ResourceEntity resource)
         {
             return orientation;
         }
@@ -701,22 +701,22 @@ namespace Structures
             return new List<Vector2Int>(1) { orientation };
         }
 
-        public void ResourceEnter(ConveyedResource resource)
+        public void ResourceEnter(ResourceEntity resource)
         {
             if (resources.Contains(resource)) throw new System.Exception("Resource already on conveyor belt.");
             resources.Add(resource);
             OnResourceEnter(resource);
         }
 
-        public void ResourceExit(ConveyedResource resource)
+        public void ResourceExit(ResourceEntity resource)
         {
             if (!resources.Contains(resource)) throw new System.Exception("Resource not on conveyor belt.");
             resources.Remove(resource);
             OnResourceExit(resource);
         }
 
-        public virtual void OnResourceEnter(ConveyedResource resource) { }
-        public virtual void OnResourceExit(ConveyedResource resource) { }
+        public virtual void OnResourceEnter(ResourceEntity resource) { }
+        public virtual void OnResourceExit(ResourceEntity resource) { }
     }
 
     public class Machine : Actuator
@@ -728,8 +728,8 @@ namespace Structures
         [SerializeField] protected int[] numberOfOutputs = { 1 };
 
         public bool isProcessing = false;
-        public ConveyedResource[][] inputResources;
-        public ConveyedResource[][] outputResources;
+        public ResourceEntity[][] inputResources;
+        public ResourceEntity[][] outputResources;
 
         public event Action OnInput;
         public event Action OnProcess;
@@ -737,10 +737,10 @@ namespace Structures
 
         public virtual void Awake()
         {
-            inputResources = new ConveyedResource[numberOfInputs.Length][];
-            outputResources = new ConveyedResource[numberOfOutputs.Length][];
-            for (int i = 0; i < numberOfInputs.Length; i++) inputResources[i] = new ConveyedResource[numberOfInputs[i]];
-            for (int i = 0; i < numberOfOutputs.Length; i++) outputResources[i] = new ConveyedResource[numberOfOutputs[i]];
+            inputResources = new ResourceEntity[numberOfInputs.Length][];
+            outputResources = new ResourceEntity[numberOfOutputs.Length][];
+            for (int i = 0; i < numberOfInputs.Length; i++) inputResources[i] = new ResourceEntity[numberOfInputs[i]];
+            for (int i = 0; i < numberOfOutputs.Length; i++) outputResources[i] = new ResourceEntity[numberOfOutputs[i]];
             if (inputFunnels.Length != numberOfInputs.Length) throw new Exception("Number of input funnels does not match number of input channels.");
             if (outputFunnels.Length != numberOfOutputs.Length) throw new Exception("Number of output funnels does not match number of output channels.");
         }
@@ -772,15 +772,15 @@ namespace Structures
             isProcessing = state.Item1;
             for (int i = 0; i < inputResources.Length; i++)
             {
-                inputResources[i] = new ConveyedResource[state.Item2[i].Length];
+                inputResources[i] = new ResourceEntity[state.Item2[i].Length];
                 for (int j = 0; j < state.Item2[i].Length; j++)
-                    if (state.Item2[i][j] != -1) inputResources[i][j] = (ConveyedResource)idLookup[state.Item2[i][j]];
+                    if (state.Item2[i][j] != -1) inputResources[i][j] = (ResourceEntity)idLookup[state.Item2[i][j]];
             }
             for (int i = 0; i < outputResources.Length; i++)
             {
-                outputResources[i] = new ConveyedResource[state.Item3[i].Length];
+                outputResources[i] = new ResourceEntity[state.Item3[i].Length];
                 for (int j = 0; j < state.Item3[i].Length; j++)
-                    if (state.Item3[i][j] != -1) outputResources[i][j] = (ConveyedResource)idLookup[state.Item3[i][j]];
+                    if (state.Item3[i][j] != -1) outputResources[i][j] = (ResourceEntity)idLookup[state.Item3[i][j]];
             }
         }
 
@@ -800,7 +800,7 @@ namespace Structures
             OnInput?.Invoke();
         }
 
-        public int TryOutputResources(int channel, List<ConveyedResource> outputResources) // modifies the outputResources list
+        public int TryOutputResources(int channel, List<ResourceEntity> outputResources) // modifies the outputResources list
         {
             int successCount = 0;
             for (int i = 0; i < numberOfOutputs[channel]; i++)
@@ -823,7 +823,7 @@ namespace Structures
                     if (inputResources[channel][i] != null) continue;
 
                     Vector2Int funnelTile = GameManager.Vector3ToTile(inputFunnels[channel].transform.position);
-                    List<ConveyedResource> funnelResources = GameManager.Instance.GetConveyorResources(funnelTile);
+                    List<ResourceEntity> funnelResources = GameManager.Instance.GetConveyorResources(funnelTile);
                     if (funnelResources == null)
                     {
                         // no conveyor belt under the funnel, disable it
@@ -836,7 +836,7 @@ namespace Structures
                         inputFunnels[channel].SetActive(true);
                     }
                     if (funnelResources.Count == 0) break;
-                    ConveyedResource resourceToPickup = funnelResources[0];
+                    ResourceEntity resourceToPickup = funnelResources[0];
                     resourceToPickup.ExitConveyPath();
                     inputResources[channel][i] = resourceToPickup;
                     resourceToPickup.EnterInventory();
@@ -902,8 +902,8 @@ namespace Structures
 
         public virtual void DropInventory()
         {
-            foreach (ConveyedResource[] resources in inputResources) foreach (ConveyedResource resource in resources) if (resource != null) resource.ExitInventory(transform.position);
-            foreach (ConveyedResource[] resources in outputResources) foreach (ConveyedResource resource in resources) if (resource != null) resource.ExitInventory(transform.position);
+            foreach (ResourceEntity[] resources in inputResources) foreach (ResourceEntity resource in resources) if (resource != null) resource.ExitInventory(transform.position);
+            foreach (ResourceEntity[] resources in outputResources) foreach (ResourceEntity resource in resources) if (resource != null) resource.ExitInventory(transform.position);
         }
 
         public virtual void ProcessMachine() { }

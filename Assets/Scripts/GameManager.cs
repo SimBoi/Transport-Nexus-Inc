@@ -17,17 +17,17 @@ public class GameManager : MonoBehaviour
     public Dictionary<string, GameObject> savablesPrefabRegistry = new();
 
     public ulong tick = 0;
-    [HideInInspector] public int[] materials = new int[Enum.GetValues(typeof(Materials)).Length];
+    [HideInInspector] public int[] resources = new int[Enum.GetValues(typeof(ResourceType)).Length];
 
     public PortNetworkGraph signalNetworkGraph { get; private set; } = new();
 
-    private Dictionary<Vector2Int, (Vector2Int orientation, Structure structure)> _tiles = new();
+    private Dictionary<Vector2Int, (Vector2Int orientation, StructureEntity structure)> _tiles = new();
     private Dictionary<Vector2Int, Sensor> _sensors = new();
     private Dictionary<Vector2Int, Processor> _processors = new();
     private Dictionary<Vector2Int, Actuator> _actuators = new();
     private Dictionary<Vector2Int, SplitterPort> _splitterPorts = new();
-    private Dictionary<Vector2Int, Structure> _rails = new();
-    private Dictionary<Vector2Int, Structure> _conveyors = new();
+    private Dictionary<Vector2Int, StructureEntity> _rails = new();
+    private Dictionary<Vector2Int, StructureEntity> _conveyors = new();
     private Dictionary<Vector2Int, Machine> _machines = new();
 
     private List<Train> _trains = new();
@@ -98,14 +98,14 @@ public class GameManager : MonoBehaviour
         // save tick
         saveData.tick = tick;
 
-        // save materials
-        saveData.materials = materials;
+        // save resources
+        saveData.resources = resources;
 
         // save tiles
-        foreach (KeyValuePair<Vector2Int, (Vector2Int orientation, Structure structure)> entry in _tiles)
+        foreach (KeyValuePair<Vector2Int, (Vector2Int orientation, StructureEntity structure)> entry in _tiles)
         {
             Vector2Int tile = entry.Key;
-            (Vector2Int orientation, Structure structure) = entry.Value;
+            (Vector2Int orientation, StructureEntity structure) = entry.Value;
             saveData.tiles.Add((tile, orientation, structure.ID));
         }
 
@@ -121,13 +121,13 @@ public class GameManager : MonoBehaviour
         // restore tick
         tick = saveData.tick;
 
-        // restore materials
-        materials = saveData.materials;
+        // restore resources 
+        resources = saveData.resources;
 
         // restore tiles
         foreach ((Vector2Int tile, Vector2Int orientation, int structureId) in saveData.tiles)
         {
-            Structure structure = idLookup[structureId] as Structure;
+            StructureEntity structure = idLookup[structureId] as StructureEntity;
             _tiles.Add(tile, (orientation, structure));
             if (structure is Sensor sensor) _sensors.Add(tile, sensor);
             else if (structure is Processor processor) _processors.Add(tile, processor);
@@ -160,31 +160,31 @@ public class GameManager : MonoBehaviour
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////// Materials //////////////////////////////////////////////
+    /////////////////////////////////////// Resources //////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public bool HasMaterials(int[] costs)
+    public bool HasResources(int[] costs)
     {
         for (int i = 0; i < costs.Length; i++)
         {
-            if (materials[i] < costs[i]) return false;
+            if (resources[i] < costs[i]) return false;
         }
         return true;
     }
 
-    public void SpendMaterials(int[] costs)
+    public void SpendResources(int[] costs)
     {
         for (int i = 0; i < costs.Length; i++)
         {
-            materials[i] -= costs[i];
+            resources[i] -= costs[i];
         }
     }
 
-    public void AddMaterials(int[] gains)
+    public void AddResources(int[] gains)
     {
         for (int i = 0; i < gains.Length; i++)
         {
-            materials[i] += gains[i];
+            resources[i] += gains[i];
         }
     }
 
@@ -202,7 +202,7 @@ public class GameManager : MonoBehaviour
         return new Vector3(tile.x, 0, tile.y);
     }
 
-    public Structure GetTileStructure(Vector2Int tile)
+    public StructureEntity GetTileStructure(Vector2Int tile)
     {
         if (!_tiles.ContainsKey(tile)) return null;
         return _tiles[tile].structure;
@@ -215,7 +215,7 @@ public class GameManager : MonoBehaviour
 
     public bool AddStructure(Vector2Int tile, Vector2Int orientation, GameObject structurePrefab)
     {
-        int size = structurePrefab.GetComponent<Structure>().size;
+        int size = structurePrefab.GetComponent<StructureEntity>().size;
         Vector2Int relativeUp = orientation;
         Vector2Int relativeRight = new Vector2Int(relativeUp.y, -relativeUp.x);
         for (int x = 0; x < size; x++)
@@ -228,7 +228,7 @@ public class GameManager : MonoBehaviour
 
         Vector3 position = new Vector3(tile.x, 0, tile.y);
         Quaternion rotation = Quaternion.LookRotation(new Vector3(orientation.x, 0, orientation.y), Vector3.up);
-        Structure instantiatedStructure = Instantiate(structurePrefab, position, rotation).GetComponent<Structure>();
+        StructureEntity instantiatedStructure = Instantiate(structurePrefab, position, rotation).GetComponent<StructureEntity>();
         instantiatedStructure.tile = tile;
         instantiatedStructure.orientation = orientation;
         instantiatedStructure.prefab = structurePrefab;
@@ -312,7 +312,7 @@ public class GameManager : MonoBehaviour
             Vector2Int frontTile = tile + orientation; // TODO: size > 1 support for chaining
             if (_tiles.ContainsKey(behindTile))
             {
-                (Vector2Int orientation, Structure structure) behindStructure = _tiles[behindTile];
+                (Vector2Int orientation, StructureEntity structure) behindStructure = _tiles[behindTile];
                 if (behindStructure.structure is Processor inputProcessor && behindStructure.orientation == orientation)
                 {
                     processor.Chain(inputProcessor);
@@ -320,7 +320,7 @@ public class GameManager : MonoBehaviour
             }
             if (_tiles.ContainsKey(frontTile))
             {
-                (Vector2Int orientation, Structure structure) frontStructure = _tiles[frontTile];
+                (Vector2Int orientation, StructureEntity structure) frontStructure = _tiles[frontTile];
                 if (frontStructure.structure is Processor outputProcessor && frontStructure.orientation == orientation)
                 {
                     outputProcessor.Chain(processor);
@@ -349,15 +349,15 @@ public class GameManager : MonoBehaviour
 
     public void RotateStructureClockwise(GameObject structure)
     {
-        RotateStructureClockwise(structure.GetComponent<Structure>().tile);
+        RotateStructureClockwise(structure.GetComponent<StructureEntity>().tile);
     }
 
     public void RotateStructureClockwise(Vector2Int tile)
     {
         if (!_tiles.ContainsKey(tile)) throw new Exception("No structure found at position: " + tile);
 
-        (Vector2Int oldOrientation, Structure structure) = _tiles[tile];
-        (Vector2Int newTile, Vector2Int newOrientation) = Structure.RotateClockwise(tile, oldOrientation, structure.size);
+        (Vector2Int oldOrientation, StructureEntity structure) = _tiles[tile];
+        (Vector2Int newTile, Vector2Int newOrientation) = StructureEntity.RotateClockwise(tile, oldOrientation, structure.size);
 
         if (!RemoveStructure(tile)) return;
         AddStructure(newTile, newOrientation, structure.prefab);
@@ -365,13 +365,13 @@ public class GameManager : MonoBehaviour
 
     public bool RemoveStructure(GameObject structure)
     {
-        return RemoveStructure(structure.GetComponent<Structure>().tile);
+        return RemoveStructure(structure.GetComponent<StructureEntity>().tile);
     }
 
     public bool RemoveStructure(Vector2Int tile)
     {
         if (!_tiles.ContainsKey(tile)) throw new Exception("No structure found at position: " + tile);
-        Structure structure = _tiles[tile].structure;
+        StructureEntity structure = _tiles[tile].structure;
         int size = structure.size;
         Vector2Int relativeUp = _tiles[tile].orientation;
         Vector2Int relativeRight = new Vector2Int(relativeUp.y, -relativeUp.x);
@@ -409,7 +409,7 @@ public class GameManager : MonoBehaviour
         }
         else if (_conveyors.ContainsKey(tile))
         {
-            List<ConveyedResource> resources = GetConveyorResources(tile);
+            List<ResourceEntity> resources = GetConveyorResources(tile);
             while (resources.Count > 0) resources[0].ExitConveyPath();
 
             if (_sensors.ContainsKey(tile))
@@ -458,7 +458,7 @@ public class GameManager : MonoBehaviour
 
         if (_isFocused && _focusedStructure == structure.gameObject) Unfocus();
 
-        structure.GetComponent<Item>().Destroy();
+        structure.GetComponent<BuildableEntity>().Destroy();
         return true;
     }
 
@@ -588,7 +588,7 @@ public class GameManager : MonoBehaviour
         if (!_conveyors.ContainsKey(tile)) throw new Exception("No conveyor found at position: " + tile);
 
         Vector2Int orientation = GetTileOrientation(tile);
-        Structure structure = GetTileStructure(tile);
+        StructureEntity structure = GetTileStructure(tile);
 
         // find the possible neighbors of the conveyor
         Vector2Int[] neighbors = new Vector2Int[4] {
@@ -663,7 +663,7 @@ public class GameManager : MonoBehaviour
         foreach (Vector2Int dir in neighbors) if (_conveyors.ContainsKey(tile + dir) && _conveyors[tile + dir] is DynamicConveyorBelt neighborConveyor && neighborConveyor.connections.Contains(-dir)) neighborConveyor.Disconnect(-dir);
     }
 
-    public List<ConveyedResource> GetConveyorResources(Vector2Int tile)
+    public List<ResourceEntity> GetConveyorResources(Vector2Int tile)
     {
         if (!_conveyors.ContainsKey(tile)) return null;
 
@@ -673,7 +673,7 @@ public class GameManager : MonoBehaviour
         else return null;
     }
 
-    public Vector2Int GetNextConveyorExitOrientation(Vector2Int tile, ConveyedResource resource)
+    public Vector2Int GetNextConveyorExitOrientation(Vector2Int tile, ResourceEntity resource)
     {
         if (!_conveyors.ContainsKey(tile)) return Vector2Int.zero;
 
@@ -714,10 +714,10 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            Vector2Int orientation = GetTileOrientation(structure.GetComponent<Structure>().tile);
+            Vector2Int orientation = GetTileOrientation(structure.GetComponent<StructureEntity>().tile);
             Vector3 relativeUp = new Vector3(orientation.x, 0, orientation.y);
             Vector3 relativeRight = new Vector3(orientation.y, 0, -orientation.x);
-            int size = structure.GetComponent<Structure>().size;
+            int size = structure.GetComponent<StructureEntity>().size;
             focusPosition = structure.transform.position + size / 2f * (relativeRight + relativeUp);
         }
 
@@ -805,7 +805,7 @@ public class GameManager : MonoBehaviour
                 Vector2Int tile = new Vector2Int(x, y) + Vector3ToTile(center);
                 if (!_tiles.ContainsKey(tile)) continue;
 
-                (Vector2Int _, Structure structure) = _tiles[tile];
+                (Vector2Int _, StructureEntity structure) = _tiles[tile];
                 if (structure is Sensor sensor)
                 {
                     if (excludePorts != null && excludePorts.Contains(sensor.outputPort)) continue;
@@ -996,10 +996,10 @@ public class GameManager : MonoBehaviour
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////// Conveyors/Items ////////////////////////////////////
+    //////////////////////////////////////////// Conveyors/Resources ////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public void ResourceEnterConveyor(ConveyedResource resource, Vector2Int tile)
+    public void ResourceEnterConveyor(ResourceEntity resource, Vector2Int tile)
     {
         if (_conveyors[tile] is DynamicConveyorBelt dynamicConveyor) dynamicConveyor.ResourceEnter(resource);
         else if (_conveyors[tile] is SensorConveyorBelt sensorConveyor) sensorConveyor.ResourceEnter(resource);
@@ -1007,7 +1007,7 @@ public class GameManager : MonoBehaviour
         else throw new Exception("No conveyor found at position: " + tile);
     }
 
-    public void ResourceExitConveyor(ConveyedResource resource, Vector2Int tile)
+    public void ResourceExitConveyor(ResourceEntity resource, Vector2Int tile)
     {
         if (_conveyors[tile] is DynamicConveyorBelt dynamicConveyor) dynamicConveyor.ResourceExit(resource);
         else if (_conveyors[tile] is SensorConveyorBelt sensorConveyor) sensorConveyor.ResourceExit(resource);
@@ -1026,15 +1026,15 @@ public class GameManagerEditor : Editor
         // Draw the default inspector
         DrawDefaultInspector();
 
-        // Custom display for materials array
+        // Custom display for resources array
         EditorGUILayout.Space();
-        if (manager.materials != null && manager.materials.Length > 0)
+        if (manager.resources != null && manager.resources.Length > 0)
         {
-            EditorGUILayout.LabelField("Materials", EditorStyles.boldLabel);
-            for (int i = 0; i < manager.materials.Length; i++)
+            EditorGUILayout.LabelField("Resources", EditorStyles.boldLabel);
+            for (int i = 0; i < manager.resources.Length; i++)
             {
                 EditorGUILayout.BeginHorizontal();
-                manager.materials[i] = EditorGUILayout.IntField(((Materials)i).ToString(), manager.materials[i]);
+                manager.resources[i] = EditorGUILayout.IntField(((ResourceType)i).ToString(), manager.resources[i]);
                 EditorGUILayout.EndHorizontal();
             }
         }

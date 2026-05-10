@@ -9,7 +9,7 @@ public class RecipeBook : ScriptableObject
     [Serializable]
     public class Ingredient
     {
-        public Materials materialType;
+        public ResourceType resourceType;
         public int amount;
         public int channel;
     }
@@ -31,13 +31,13 @@ public class RecipeBook : ScriptableObject
         {
             foreach (Ingredient ingredient in recipe.ingredients)
             {
-                hash.Add(ingredient.materialType);
+                hash.Add(ingredient.resourceType);
                 hash.Add(ingredient.amount);
                 hash.Add(ingredient.channel);
             }
             foreach (Ingredient product in recipe.products)
             {
-                hash.Add(product.materialType);
+                hash.Add(product.resourceType);
                 hash.Add(product.amount);
                 hash.Add(product.channel);
             }
@@ -46,7 +46,7 @@ public class RecipeBook : ScriptableObject
         return hash.ToHashCode();
     }
 
-    public int GetFirstValidRecipe(ConveyedResource[][] inputResources)
+    public int GetFirstValidRecipe(ResourceEntity[][] inputResources)
     {
         // for each recipe in the list, for each ingredient in the recipe, check if the inputResources has at least the same amount of resources
         // if it does, return the index of the recipe
@@ -57,9 +57,9 @@ public class RecipeBook : ScriptableObject
             foreach (Ingredient ingredient in recipe.ingredients)
             {
                 int ingredientAmount = 0;
-                foreach (ConveyedResource resource in inputResources[ingredient.channel])
+                foreach (ResourceEntity resource in inputResources[ingredient.channel])
                 {
-                    if (resource != null && resource.materialType == ingredient.materialType) ingredientAmount++;
+                    if (resource != null && resource.resourceType == ingredient.resourceType) ingredientAmount++;
                 }
                 if (ingredientAmount < ingredient.amount)
                 {

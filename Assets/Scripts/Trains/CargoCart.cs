@@ -8,12 +8,12 @@ using UnityEngine;
 public class CargoCart : Cart
 {
     [SerializeField] private int capacity = 10;
-    private ConveyedResource[] cargo;
+    private ResourceEntity[] cargo;
 
 
     public void Awake()
     {
-        cargo = new ConveyedResource[capacity];
+        cargo = new ResourceEntity[capacity];
     }
 
     public override string GetStateJson()
@@ -35,9 +35,9 @@ public class CargoCart : Cart
         base.RestoreStateJson(combinedState.baseState, idLookup);
         var state = JsonConvert.DeserializeObject<(int, int[])>(combinedState.inheritedState);
         capacity = state.Item1;
-        cargo = new ConveyedResource[capacity];
+        cargo = new ResourceEntity[capacity];
         for (int i = 0; i < state.Item2.Length; i++)
-            cargo[i] = state.Item2[i] == -1 ? null : idLookup[state.Item2[i]] as ConveyedResource;
+            cargo[i] = state.Item2[i] == -1 ? null : idLookup[state.Item2[i]] as ResourceEntity;
     }
 
     public void OnDestroy()
@@ -47,11 +47,11 @@ public class CargoCart : Cart
 
     public void DropInventory()
     {
-        foreach (ConveyedResource resource in cargo) if (resource != null) resource.ExitInventory(transform.position);
+        foreach (ResourceEntity resource in cargo) if (resource != null) resource.ExitInventory(transform.position);
         for (int i = 0; i < cargo.Count(); i++) cargo[i] = null;
     }
 
-    public bool TryInputResource(ConveyedResource resource, Action PrepareResource= null)
+    public bool TryInputResource(ResourceEntity resource, Action PrepareResource= null)
     {
         for (int i = 0; i < cargo.Count(); i++) if (cargo[i] == null)
         {
@@ -63,11 +63,11 @@ public class CargoCart : Cart
         return false;
     }
 
-    public ConveyedResource TryOutputResource()
+    public ResourceEntity TryOutputResource()
     {
         for (int i = 0; i < cargo.Count(); i++) if (cargo[i] != null)
         {
-            ConveyedResource resource = cargo[i];
+            ResourceEntity resource = cargo[i];
             resource.ExitInventory(transform.position);
             cargo[i] = null;
             return resource;

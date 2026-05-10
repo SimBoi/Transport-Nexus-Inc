@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Signals
 {
-    public class SplitterPort : Structure
+    public class SplitterPort : StructureEntity
     {
         public PortNetworkGraph network { get; private set; }
         [SerializeField] public Port port;
