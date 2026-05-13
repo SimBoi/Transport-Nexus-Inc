@@ -42,7 +42,10 @@ public class ResourceExtractor : Machine
         if (currentProcessingTicks < speedTicks) currentProcessingTicks++;
         if (currentProcessingTicks == speedTicks && outputResources[0][0] == null)
         {
-            outputResources[0][0] = null; // TODO access the registry to create an item
+            GameObject prefab = PrefabRegistries.Instance.resources[resourceNode.GetResourceType()];
+            ResourceEntity resource = Instantiate(prefab, transform.position, Quaternion.identity).GetComponent<ResourceEntity>();
+            resource.EnterInventory();
+            outputResources[0][0] = resource;
             currentProcessingTicks = 0;
         }
     }

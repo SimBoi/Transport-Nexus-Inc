@@ -12,6 +12,20 @@ public enum ResourceNode
     None
 }
 
+static class ResourceNodeExtension
+{
+    private static readonly Dictionary<ResourceNode, ResourceType> resourceTypeToNode = new()
+    {
+        {ResourceNode.Coal, ResourceType.Coal},
+        {ResourceNode.Iron, ResourceType.Iron},
+    };
+
+    public static ResourceType GetResourceType(this ResourceNode resourceNode)
+    {
+        return resourceTypeToNode[resourceNode];
+    }
+}
+
 public enum Biome
 {
     LushPlains
@@ -258,11 +272,6 @@ public struct GameObjectArray
 public class ChunksManager : MonoBehaviour
 {
     public static ChunksManager instance { get; private set; }
-    public static Dictionary<ResourceNode, ResourceType> resourceNodeToMaterial = new() // TODO
-    {
-        {ResourceNode.Coal, ResourceType.Coal},
-        {ResourceNode.Iron, ResourceType.Iron}
-    };
     [SerializeField] private GameObject chunkPrefab;
     private Stack<Chunk> chunkPool = new();
     private Dictionary<Vector2Int, Chunk> chunks = new();
@@ -275,9 +284,9 @@ public class ChunksManager : MonoBehaviour
 
     private List<Material> idToMaterial = new();
     private Dictionary<Material, int> materialToId = new();
-    [SerializeField] private GameObjectArray[] lushPlainsTilePrefabs;
+    [SerializeField] private GameObjectArray[] lushPlainsTilePrefabs;  // TODO low priority: count should be the number of differnt tile heights, improve this to something less bug prone
     [SerializeField] private GameObject[] lushPlainsVegetationPrefabs;
-    [SerializeField] private GameObjectArray[] lushPlainsResourceNodePrefabs;
+    [SerializeField] private GameObjectArray[] lushPlainsResourceNodePrefabs;  // TODO low priority: count should be the number of different resource node types, improve this to something less bug prone
     [HideInInspector] public ThreadSafeMesh[][] lushPlainsTiles { get; private set; }
     [HideInInspector] public ThreadSafeMesh[] lushPlainsVegetation { get; private set; }
     [HideInInspector] public ThreadSafeMesh[][] lushPlainsResourceNodes { get; private set; }

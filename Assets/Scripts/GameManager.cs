@@ -6,15 +6,11 @@ using System;
 using Inventories;
 using UnityEditor;
 
-// TODO: refactor into sub-managers to reduce complexity of the GameManager
-// TODO: add event based subsciptions and interactions to potentially reduce complexity
+// TODO: low priority: refactor into sub-managers to reduce complexity of the GameManager
+// TODO: low priority: add event based subsciptions and interactions to potentially reduce complexity
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
-
-    // Prefab registries
-    public List<GameObject> savablePrefabs;
-    public Dictionary<string, GameObject> savablesPrefabRegistry = new();
 
     public ulong tick = 0;
     [HideInInspector] public int[] resources = new int[Enum.GetValues(typeof(ResourceType)).Length];
@@ -54,16 +50,6 @@ public class GameManager : MonoBehaviour
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
-
-        // Build the registry using the prefab's component type name as key
-        foreach (GameObject prefab in savablePrefabs)
-        {
-            ISavable savable = prefab.GetComponent<ISavable>();
-            if (savable != null)
-            {
-                savablesPrefabRegistry[savable.GetType().ToString()] = prefab;
-            }
-        }
     }
 
     void FixedUpdate()

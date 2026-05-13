@@ -43,7 +43,5 @@ public class PrefabRegistries : MonoBehaviour
             ResourceType resourceType = resource.resourceType;
             resources[resourceType] = prefab;
         }
-
-        // TODO Build the registry using the resource nodes as key
     }
 }
