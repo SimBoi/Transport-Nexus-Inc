@@ -66,6 +66,13 @@ namespace Signals
             _graph.RemoveVertex(port);
         }
 
+        public IEnumerable<GameObject> GetWires(Port port)
+        {
+            if (!port.isConnected) return new GameObject[0];
+            var edges = _graph.AdjacentEdges(port);
+            return edges.Select(i => i.Tag);
+        }
+
         public void ConnectWire(GameObject wire, Port port1, Port port2)
         {
             if (port1.isConnected) AssignSignalChannelBFS(port2, port1.signalChannel);

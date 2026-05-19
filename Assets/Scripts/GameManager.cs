@@ -5,6 +5,7 @@ using UnityEngine;
 using System;
 using Inventories;
 using UnityEditor;
+using GogoGaga.OptimizedRopesAndCables;
 
 // TODO: low priority: refactor into sub-managers to reduce complexity of the GameManager
 // TODO: low priority: add event based subsciptions and interactions to potentially reduce complexity
@@ -32,7 +33,9 @@ public class GameManager : MonoBehaviour
     private GameObject _focusedStructure;
     private GameObject _focusedTrain;
     [SerializeField] private GameObject portUIPrefab;
+    [SerializeField] private GameObject wireUIPrefab;
     private List<GameObject> _highlightedPorts = new();
+    private List<GameObject> _highlightedWires = new();
     [SerializeField] private GameObject buildingUIPrefab;
     private GameObject _buildingUI;
     [SerializeField] private GameObject trainPrefab;
@@ -714,7 +717,7 @@ public class GameManager : MonoBehaviour
         if (portUI)
         {
             HighlightDisconnectedPorts(focusPosition, excludePorts: excludePorts);
-            // TODO: "delete" button for ports that are already connected
+            HighlightWires(Vector3ToTile(focusPosition));
         }
         if (buildingUI)
         {
@@ -781,6 +784,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
+
     public void HighlightDisconnectedPorts(Vector3 center, float radius = 0, List<Port> excludePorts = null)
     {
         // go through all the tiles in a 2*radius square around the center and highlight the ports
@@ -840,6 +844,56 @@ public class GameManager : MonoBehaviour
         _highlightedPorts.Add(portUI);
     }
 
+    public void HighlightWires(Vector2Int tile)
+    {
+        List<IEnumerable<GameObject>> wires = new();
+        (Vector2Int _, StructureEntity structure) = _tiles[tile];
+        if (structure is Sensor sensor)
+        {
+           wires.Add(sensor.outputPort.network.GetWires(sensor.outputPort));
+        }
+        else if (structure is Processor processor)
+        {
+            foreach (Port port in processor.inputPorts)
+            {
+                wires.Add(port.network.GetWires(port));
+            }
+            wires.Add(processor.outputPort.network.GetWires(processor.outputPort));
+        }
+        else if (structure is Actuator actuator)
+        {
+            foreach (Port port in actuator.inputPorts)
+            {
+                wires.Add(port.network.GetWires(port));
+            }
+        }
+        else if (structure is SplitterPort splitterPort)
+        {
+            wires.Add(splitterPort.port.network.GetWires(splitterPort.port));
+        }
+
+        foreach (var t in wires)
+        {
+            foreach (var wire in t)
+            {
+                HighlightWire(wire);
+            }
+        }
+    }
+
+    public void HighlightWire(GameObject wire)
+    {
+        if (wire == null) return;
+        Rope rope = wire.GetComponent<Rope>();
+        Vector3 cameraDirection = Camera.main.transform.forward;
+        Vector3 cameraUp = Camera.main.transform.up;
+        Vector3 position = (rope.StartPoint.position + rope.EndPoint.position) / 2 - cameraUp * 0.3f - cameraDirection * 0.5f;
+        Quaternion rotation = Quaternion.LookRotation(-cameraDirection, Vector3.up);
+        GameObject wireUI = Instantiate(wireUIPrefab, position, rotation);
+        wireUI.GetComponent<WireUI>().wire = wire;
+        _highlightedWires.Add(wireUI);
+    }
+
     public void UnhighlightDisconnectedPorts(List<Port> excludePorts = null)
     {
         List<GameObject> portsToKeep = new();
@@ -849,6 +903,15 @@ public class GameManager : MonoBehaviour
             else Destroy(portUI);
         }
         _highlightedPorts = portsToKeep;
+    }
+
+    public void UnhighlightWires()
+    {
+        foreach (GameObject wireUI in _highlightedWires)
+        {
+            Destroy(wireUI);
+        }
+        _highlightedWires.Clear();
     }
 
     public void ShowConnectableExtender(Vector2Int tile, Vector2Int orientation, GameObject connectablePrefab, bool isReversed = false)
@@ -884,6 +947,7 @@ public class GameManager : MonoBehaviour
         if (portUI)
         {
             UnhighlightDisconnectedPorts(excludePorts);
+            UnhighlightWires();
         }
         if (buildingUI && _buildingUI != null)
         {

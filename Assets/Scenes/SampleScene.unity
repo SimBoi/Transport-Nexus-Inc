@@ -2990,6 +2990,7 @@ MonoBehaviour:
   tick: 0
   resources: 000000000000000010270000
   portUIPrefab: {fileID: 781856674227519226, guid: f682d593ab29fa145a4ba5110ef58ff5, type: 3}
+  wireUIPrefab: {fileID: 3475374192696399441, guid: 34e26b43af503b7aca6c3a8f9efbdd48, type: 3}
   buildingUIPrefab: {fileID: 3552425056937049675, guid: 90c5ffb1b59fe0540a81369b41cead4c, type: 3}
   trainPrefab: {fileID: 8198978166720814185, guid: 852f6733ace79c6499b5bb3d08269ceb, type: 3}
   ConnectableExtenderPrefab: {fileID: 8482752785500036664, guid: e1671c0f00fdf7646afcd7b845944bfa, type: 3}
