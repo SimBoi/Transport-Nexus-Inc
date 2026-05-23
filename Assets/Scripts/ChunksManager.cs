@@ -405,12 +405,14 @@ public class ChunksManager : MonoBehaviour
                     new Vector3(chunkCoords.x * Chunk.size, 0, chunkCoords.y * Chunk.size),
                     Quaternion.identity
                 );
-                _ = chunk.GenerateDataAsync(seed, chunkCoords);
+                _ = chunk.GenerateDataAsync(seed, chunkCoords, new bool[Chunk.size, Chunk.size]); // TODO clearedTiles map
                 chunks.Add(chunkCoords, chunk);
             }
             if (-renderDistance <= x && x <= renderDistance && -renderDistance <= z && z <= renderDistance)
             {
-                _ = chunks[chunkCoords].GenerateMeshAsync(chunkCoords);
+                _ = chunks[chunkCoords].GenerateTilesMeshAsync();
+                _ = chunks[chunkCoords].GenerateVegetationMeshAsync();
+                _ = chunks[chunkCoords].GenerateResourceNodesMeshAsync();
             }
         }
     }
