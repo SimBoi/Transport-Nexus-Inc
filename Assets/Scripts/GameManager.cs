@@ -6,6 +6,7 @@ using System;
 using Inventories;
 using UnityEditor;
 using GogoGaga.OptimizedRopesAndCables;
+using Unity.VisualScripting;
 
 // TODO: low priority: refactor into sub-managers to reduce complexity of the GameManager
 // TODO: low priority: add event based subsciptions and interactions to potentially reduce complexity
@@ -207,13 +208,16 @@ public class GameManager : MonoBehaviour
         int size = structurePrefab.GetComponent<StructureEntity>().size;
         Vector2Int relativeUp = orientation;
         Vector2Int relativeRight = new Vector2Int(relativeUp.y, -relativeUp.x);
+        List<Vector2Int> tiles = new(size*size);
         for (int x = 0; x < size; x++)
         for (int y = 0; y < size; y++)
         {
             Vector2Int subTile = tile + x * relativeRight + y * relativeUp;
             if (_tiles.ContainsKey(subTile)) return false;
             if (!ChunksManager.instance.CanBuild(subTile)) return false;
+            tiles.Add(subTile);
         }
+        ChunksManager.instance.ClearVegetation(tiles);
 
         Vector3 position = new Vector3(tile.x, 0, tile.y);
         Quaternion rotation = Quaternion.LookRotation(new Vector3(orientation.x, 0, orientation.y), Vector3.up);

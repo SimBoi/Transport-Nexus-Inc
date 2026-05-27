@@ -269,6 +269,7 @@ public struct GameObjectArray
     }
 }
 
+// TODO low priority handle more stuff in ChunksManager instead of Chunk class
 public class ChunksManager : MonoBehaviour
 {
     public static ChunksManager instance { get; private set; }
@@ -405,7 +406,7 @@ public class ChunksManager : MonoBehaviour
                     new Vector3(chunkCoords.x * Chunk.size, 0, chunkCoords.y * Chunk.size),
                     Quaternion.identity
                 );
-                _ = chunk.GenerateDataAsync(seed, chunkCoords, new bool[Chunk.size, Chunk.size]); // TODO clearedTiles map
+                _ = chunk.GenerateDataAsync(seed, chunkCoords, new bool[Chunk.size, Chunk.size]); // TODO clearedTiles map ISavable
                 chunks.Add(chunkCoords, chunk);
             }
             if (-renderDistance <= x && x <= renderDistance && -renderDistance <= z && z <= renderDistance)
@@ -487,5 +488,21 @@ public class ChunksManager : MonoBehaviour
         Vector2Int chunkCoords = Vector2Int.FloorToInt((Vector2)tileCoords / Chunk.size);
         if (!chunks.ContainsKey(chunkCoords)) throw new Exception("requested resource node information on unloaded chunk");
         return chunks[chunkCoords].GetResourceNode(tileCoords - chunkCoords * Chunk.size);
+    }
+
+    public void ClearVegetation(List<Vector2Int> tiles)
+    {
+        List<Vector2Int> chunksToRegenerateMesh = new();
+        foreach (var tileCoords in tiles)
+        {
+            Vector2Int chunkCoords = Vector2Int.FloorToInt((Vector2)tileCoords / Chunk.size);
+            bool needsRegeneration = chunks[chunkCoords].ClearVegetation(tileCoords - chunkCoords * Chunk.size);
+            if (needsRegeneration && !chunksToRegenerateMesh.Contains(chunkCoords)) chunksToRegenerateMesh.Add(chunkCoords);
+        }
+        foreach (var chunkCoords in chunksToRegenerateMesh)
+        {
+            chunks[chunkCoords].ClearVegetationMesh();
+            chunks[chunkCoords].GenerateVegetationMeshSync();
+        }
     }
 }
