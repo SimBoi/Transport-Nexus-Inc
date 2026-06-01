@@ -76,11 +76,11 @@ public class Chunk : MonoBehaviour
         resourceNodesMeshGenerationTask = null;
     }
 
-    public async Awaitable GenerateDataAsync(int seed, Vector2Int chunkCoords, bool[,] clearedTiles)
+    public async Awaitable GenerateDataAsync(int seed, Vector2Int chunkCoords, HashSet<Vector2Int> clearedTiles)
     {
         this.chunkCoords = chunkCoords;
         if (dataReady) return;
-        async Awaitable Aux(int seed, bool[,] clearedTiles)
+        async Awaitable Aux(int seed, HashSet<Vector2Int> clearedTiles)
         {
             await Awaitable.BackgroundThreadAsync();
 
@@ -112,8 +112,12 @@ public class Chunk : MonoBehaviour
                 if (biomeMap[x, z] == Biome.LushPlains)
                 {
                     Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
-                    float noise = (lushPlainsHeightNoise.GetNoise(tileCoords.x, tileCoords.y) + 1) / 2;
-                    heightMap[x, z] = Mathf.FloorToInt(noise * ChunksManager.instance.lushPlainsTiles.Length);
+                    float noise = lushPlainsHeightNoise.GetNoise(tileCoords.x, tileCoords.y);
+                    if (noise < -0.9f) heightMap[x, z] = 0;
+                    else if (noise < 0f) heightMap[x, z] = 1;
+                    else if (noise < 0.8f) heightMap[x, z] = 2;
+                    else if (noise < 0.9f) heightMap[x, z] = 3;
+                    else heightMap[x, z] = 4;
                 }
             }
 
@@ -126,10 +130,11 @@ public class Chunk : MonoBehaviour
             for (int x = 0; x < size; x++)
                 for (int z = 0; z < size; z++)
                 {
-                    if (clearedTiles[x, z] == true) continue;
+                    vegetationMap[x, z] = false;
+                    Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
+                    if (clearedTiles.Contains(tileCoords)) continue;
                     if (biomeMap[x, z] == Biome.LushPlains)
                     {
-                        Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
                         float noise = vegetationNoise.GetNoise(tileCoords.x, tileCoords.y);
                         vegetationMap[x, z] = noise > 0.6f;
                     }
@@ -149,17 +154,17 @@ public class Chunk : MonoBehaviour
             for (int x = 0; x < size; x++)
             for (int z = 0; z < size; z++)
             {
-                if (clearedTiles[x, z] == true) continue;
+                resourceNodeMap[x, z] = ResourceNode.None;
+                Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
+                if (clearedTiles.Contains(tileCoords))
                 if (biomeMap[x, z] == Biome.LushPlains)
                 {
-                    Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
                     float ironNoise = ironNodesNoise.GetNoise(tileCoords.x, tileCoords.y);
                     float coalNoise = coalNodesNoise.GetNoise(tileCoords.x, tileCoords.y);
                     // prioritise certain materials by checking them first
                     if (heightMap[x, z] != 1) resourceNodeMap[x, z] = ResourceNode.None;
                     else if (ironNoise > 0.8f) resourceNodeMap[x, z] = ResourceNode.Iron;
                     else if (coalNoise > 0.6f) resourceNodeMap[x, z] = ResourceNode.Coal;
-                    else resourceNodeMap[x, z] = ResourceNode.None;
                 }
             }
 

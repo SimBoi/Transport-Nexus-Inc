@@ -4,6 +4,7 @@ using System;
 using UnityEngine.Rendering;
 using System.Linq;
 using Inventories;
+using Newtonsoft.Json;
 
 public enum ResourceNode
 {
@@ -270,7 +271,7 @@ public struct GameObjectArray
 }
 
 // TODO low priority handle more stuff in ChunksManager instead of Chunk class
-public class ChunksManager : MonoBehaviour
+public class ChunksManager : MonoBehaviour, ISavable
 {
     public static ChunksManager instance { get; private set; }
     [SerializeField] private GameObject chunkPrefab;
@@ -291,6 +292,38 @@ public class ChunksManager : MonoBehaviour
     [HideInInspector] public ThreadSafeMesh[][] lushPlainsTiles { get; private set; }
     [HideInInspector] public ThreadSafeMesh[] lushPlainsVegetation { get; private set; }
     [HideInInspector] public ThreadSafeMesh[][] lushPlainsResourceNodes { get; private set; }
+
+    private HashSet<Vector2Int> clearedTiles = new();
+
+    private int _id = -1;
+    public int ID
+    {
+        get
+        {
+            if (_id == -1) _id = SaveManager.Instance.GenerateUniqueId();
+            return _id;
+        }
+        set => _id = value;
+    }
+
+    public string TypeName => GetType().ToString();
+
+    public bool ShouldInstantiateOnLoad() => false;
+
+    public string GetStateJson()
+    {
+        return JsonConvert.SerializeObject(
+            clearedTiles
+        );
+    }
+
+    public void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup)
+    {
+        foreach (Vector2Int chunkCoords in chunks.Keys) DestroyChunk(chunks[chunkCoords]);
+        chunks.Clear();
+        print(stateJson);
+        clearedTiles = JsonConvert.DeserializeObject<HashSet<Vector2Int>>(stateJson);
+    }
 
     private void Awake()
     {
@@ -406,7 +439,7 @@ public class ChunksManager : MonoBehaviour
                     new Vector3(chunkCoords.x * Chunk.size, 0, chunkCoords.y * Chunk.size),
                     Quaternion.identity
                 );
-                _ = chunk.GenerateDataAsync(seed, chunkCoords, new bool[Chunk.size, Chunk.size]); // TODO clearedTiles map ISavable
+                _ = chunk.GenerateDataAsync(seed, chunkCoords, clearedTiles);
                 chunks.Add(chunkCoords, chunk);
             }
             if (-renderDistance <= x && x <= renderDistance && -renderDistance <= z && z <= renderDistance)
@@ -496,7 +529,9 @@ public class ChunksManager : MonoBehaviour
         foreach (var tileCoords in tiles)
         {
             Vector2Int chunkCoords = Vector2Int.FloorToInt((Vector2)tileCoords / Chunk.size);
-            bool needsRegeneration = chunks[chunkCoords].ClearVegetation(tileCoords - chunkCoords * Chunk.size);
+            Vector2Int localTileCoords = tileCoords - chunkCoords * Chunk.size;
+            clearedTiles.Add(tileCoords);
+            bool needsRegeneration = chunks[chunkCoords].ClearVegetation(localTileCoords);
             if (needsRegeneration && !chunksToRegenerateMesh.Contains(chunkCoords)) chunksToRegenerateMesh.Add(chunkCoords);
         }
         foreach (var chunkCoords in chunksToRegenerateMesh)

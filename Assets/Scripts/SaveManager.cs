@@ -141,18 +141,23 @@ public class SaveManager : MonoBehaviour
         {
             if (entry.shouldInstantiateOnLoad) continue;
 
+            // custom logic for finding/instantiating the object
             if (entry.type == typeof(Signals.Port).ToString())
             {
                 // find the port using its name and the id of the structure it belongs to (stored in the stateJson)
                 (int _, string name, int structureId) = JsonConvert.DeserializeObject<(int, string, int)>(entry.stateJson);
                 idLookup[entry.id] = ((MonoBehaviour)idLookup[structureId]).gameObject.GetComponentsInChildren<Signals.Port>().First(p => p.name == name);
-                idLookup[entry.id].ID = entry.id;
             }
             else if (entry.type == typeof(Signals.Channel).ToString())
             {
                 idLookup[entry.id] = new Signals.Channel();
-                idLookup[entry.id].ID = entry.id;
             }
+            else if (entry.type == typeof(ChunksManager).ToString())
+            {
+                idLookup[entry.id] = ChunksManager.instance;
+            }
+
+            idLookup[entry.id].ID = entry.id;
         }
 
         // Phase 3: Restore GameManager state
