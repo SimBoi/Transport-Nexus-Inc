@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using Newtonsoft.Json;
 
+// TODO: future improvement avoid having to implement custom logic whenever I have an ISavable as a property of another ISavable / a child of a prefab that wont be directly instantiated. potentially make 3 classes: ISavable (root monobehaviours in prefabs), ISavableChild (child monobehaviours in prefabs) and ISavableProperty (non monobehaviours), avoid repeating the CombinedState code by finding a way to reuse it
 // A simple interface for objects that can be saved and restored
 // in case the object shouldn't be instantiated on load, custom logic for finding or creating the object should be implemented in the LoadGame method
 public interface ISavable
@@ -11,6 +12,12 @@ public interface ISavable
     int ID { get; set; }
     string TypeName { get; }
     bool ShouldInstantiateOnLoad();
+    string GetStateJson();
+    void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup);
+}
+
+public interface ISavableProperty
+{
     string GetStateJson();
     void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup);
 }

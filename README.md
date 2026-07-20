@@ -2,22 +2,38 @@
 
 Transport Nexus Inc is a simple tech game designed for ease of playing on both pc and mobile platforms.
 
-## Feature Roadmap
+## Features
 
-1.  Structures placement and hotbar UI - Done!
-2.  Circuit components and wiring - Done!
-3.  Trains and rails network - Done!
-4.  Serialization/deserialization - Done!
-5.  Items and Conveyor belts - Done!
-6.  Machines and funnels - Done!
-7.  Code documentation
-8.  Cargo carts - Done!
-9.  Pickup/Drop items interactively
-10. Camera Navigation - Done!
-11. Terrain Generation + building limits
-12. Migrate to new input system
-13. Menus
+- Structures placement and hotbar UI
+- Circuit components and wiring
+- Trains and rails network
+- Serialization/deserialization
+- Items and Conveyor belts
+- Machines and funnels
+- Cargo carts
+- Camera Navigation
+
+## WIP
+
+- Terrain Generation + building limits
+- Storage Containers & Storage Monitor
+
+## Roadmap
+
+- void tool to delete items interactively
+- Migrate to new input system
+- Menus
+- Sounds
+- Models & Animations
+- Game loop planning
+- Code documentation - I think its too late for that now. Am I cooked chat?
 
 ## Bugs/Improvements
 
+- Select tool for bulk operations
+- Train IDs + Pressure Plates
 - internal clocks for funnels instead of relying on global ticks
+- Fluids & water bodies
+- PCBs (create parts that contain complex signal logic)
+- Train not removing itself from all rail tiles properly
+
