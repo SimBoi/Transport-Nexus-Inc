@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 7640723278584451976}
   - component: {fileID: 4081903233080377948}
   - component: {fileID: 4991722024615767674}
+  - component: {fileID: 1934030676498542465}
   - component: {fileID: 2549849901858298472}
   m_Layer: 6
   m_Name: Cargo Cart
@@ -144,6 +145,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   train: {fileID: 0}
+  storage: {fileID: 1934030676498542465}
+--- !u!114 &1934030676498542465
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1954621764618227298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 972574dad50be40f6a153a3043f0b2a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CargoStorage
   capacity: 10
 --- !u!54 &2549849901858298472
 Rigidbody:

@@ -861,7 +861,7 @@ Light:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 410087039}
   m_Enabled: 1
-  serializedVersion: 12
+  serializedVersion: 13
   m_Type: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Intensity: 2
@@ -913,7 +913,7 @@ Light:
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
   m_ForceVisible: 0
-  m_ShadowRadius: 0
+  m_ShapeRadius: 0
   m_ShadowAngle: 0
   m_LightUnit: 1
   m_LuxAtDistance: 1
@@ -1464,6 +1464,9 @@ MonoBehaviour:
   - {fileID: 1162479721215676537, guid: 48381050dce9d854894599648bf9090a, type: 3}
   - {fileID: 9076694439256521721, guid: 6ae41fcf2dd4ddc478e120cbb9c8b5f7, type: 3}
   - {fileID: 7496480598704414671, guid: bad4a534206ad1a4f932b1887eb6179a, type: 3}
+  - {fileID: 79770294520764093, guid: db98009c862ef948c8936c94ad570762, type: 3}
+  - {fileID: 79770294520764093, guid: 1a10ab6a7379eb66b87b01a4135615ea, type: 3}
+  - {fileID: 79770294520764093, guid: ff9823a28bde41fbf9b7c3705ce7b974, type: 3}
   expanded: {fileID: 412086682}
   collapsed: {fileID: 431950727}
   hotbarSlotPrefab: {fileID: 7851078394814731853, guid: f41cb01afc9f52247b69945db3a9d4c8, type: 3}
@@ -2345,6 +2348,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -3050,6 +3054,7 @@ MonoBehaviour:
   - {fileID: 1954621764618227298, guid: 36cd15cea80c5494e964618d4d77622f, type: 3}
   - {fileID: 5599789153941420970, guid: 1a10ab6a7379eb66b87b01a4135615ea, type: 3}
   - {fileID: 5599789153941420970, guid: ff9823a28bde41fbf9b7c3705ce7b974, type: 3}
+  - {fileID: 5599789153941420970, guid: db98009c862ef948c8936c94ad570762, type: 3}
   resourcePrefabs:
   - {fileID: 3318929349999408539, guid: a966cc7f758863c45916e0c4bfe2a540, type: 3}
   - {fileID: 3875453984488858362, guid: 468c46e7634d1d049b9573fba20f002f, type: 3}
@@ -3787,8 +3792,6 @@ MonoBehaviour:
   - {fileID: 1313187256423907593, guid: 2ace5dc297090af42940e368b637cd18, type: 3}
   - {fileID: 1313187256423907593, guid: 9806e50356d9c934f8306572ac2ded6d, type: 3}
   - {fileID: 14972942831900650, guid: c0bd36e8d0eb1694696f6be3b7900f71, type: 3}
-  - {fileID: 79770294520764093, guid: 1a10ab6a7379eb66b87b01a4135615ea, type: 3}
-  - {fileID: 79770294520764093, guid: ff9823a28bde41fbf9b7c3705ce7b974, type: 3}
   expanded: {fileID: 1464086227}
   collapsed: {fileID: 366664249}
   hotbarSlotPrefab: {fileID: 7851078394814731853, guid: f41cb01afc9f52247b69945db3a9d4c8, type: 3}

@@ -75,7 +75,7 @@ namespace Signals
 
         public int CompareTo(Port other)
         {
-            return GetInstanceID().CompareTo(other.GetInstanceID());
+            return GetEntityId().CompareTo(other.GetEntityId());
         }
     }
 }

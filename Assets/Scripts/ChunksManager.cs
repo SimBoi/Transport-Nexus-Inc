@@ -321,7 +321,6 @@ public class ChunksManager : MonoBehaviour, ISavable
     {
         foreach (Vector2Int chunkCoords in chunks.Keys) DestroyChunk(chunks[chunkCoords]);
         chunks.Clear();
-        print(stateJson);
         clearedTiles = JsonConvert.DeserializeObject<HashSet<Vector2Int>>(stateJson);
     }
 

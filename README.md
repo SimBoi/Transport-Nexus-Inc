@@ -30,6 +30,7 @@ Transport Nexus Inc is a simple tech game designed for ease of playing on both p
 
 ## Bugs/Improvements
 
+- Remove funnel enable/disable
 - Select tool for bulk operations
 - Train IDs + Pressure Plates
 - internal clocks for funnels instead of relying on global ticks

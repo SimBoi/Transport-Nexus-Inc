@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 using Structures;
 using UnityEngine;
 
-public class CargoContainer : Structure
+public class CargoContainer : StructureEntity
 {
     public CargoStorage storage;
 

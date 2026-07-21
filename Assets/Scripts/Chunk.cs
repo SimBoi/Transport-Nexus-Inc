@@ -103,9 +103,9 @@ public class Chunk : MonoBehaviour
             // generate height data
             FastNoiseLite lushPlainsHeightNoise = new(seed + 1);
             lushPlainsHeightNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
-            lushPlainsHeightNoise.SetFrequency(0.1f);
+            lushPlainsHeightNoise.SetFrequency(0.03f);
             lushPlainsHeightNoise.SetFractalType(FastNoiseLite.FractalType.FBm);
-            lushPlainsHeightNoise.SetFractalOctaves(1);
+            lushPlainsHeightNoise.SetFractalOctaves(2);
             for (int x = 0; x < size; x++)
             for (int z = 0; z < size; z++)
             {
@@ -113,10 +113,10 @@ public class Chunk : MonoBehaviour
                 {
                     Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
                     float noise = lushPlainsHeightNoise.GetNoise(tileCoords.x, tileCoords.y);
-                    if (noise < -0.9f) heightMap[x, z] = 0;
-                    else if (noise < 0f) heightMap[x, z] = 1;
-                    else if (noise < 0.8f) heightMap[x, z] = 2;
-                    else if (noise < 0.9f) heightMap[x, z] = 3;
+                    if (noise < -0.7f) heightMap[x, z] = 0;
+                    else if (noise < 0.4f) heightMap[x, z] = 1;
+                    else if (noise < 0.5f) heightMap[x, z] = 2;
+                    else if (noise < 0.6f) heightMap[x, z] = 3;
                     else heightMap[x, z] = 4;
                 }
             }

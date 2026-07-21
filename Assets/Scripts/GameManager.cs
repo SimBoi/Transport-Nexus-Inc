@@ -330,11 +330,6 @@ public class GameManager : MonoBehaviour
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _splitterPorts.Add(tile + x * relativeRight + y * relativeUp, splitterPort);
             splitterPort.InitializeSplitterPort(signalNetworkGraph);
         }
-        else
-        {
-            Destroy(instantiatedStructure.gameObject);
-            throw new Exception("Invalid structure type");
-        }
 
         FocusStructure(instantiatedStructure.gameObject);
         return true;
