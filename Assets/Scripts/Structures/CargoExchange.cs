@@ -60,16 +60,8 @@ public class CargoExchange : Machine
                 if (inputResources[channel][i] != null) continue;
 
                 Vector2Int funnelTile = GameManager.Vector3ToTile(inputFunnels[channel].transform.position);
-
-                // find out which cargo storage type we are connected to
-                Cart cart = GameManager.Instance.GetCart(funnelTile);
-                StructureEntity structure = GameManager.Instance.GetTileStructure(funnelTile);
-                CargoStorage storage;
-                if (cart is CargoCart cargoCart && cargoCart.train.speed <= 0)
-                    storage = cargoCart.storage;
-                else if (structure is CargoContainer cargoContainer)
-                    storage = cargoContainer.storage;
-                else
+                CargoStorage storage = GameManager.Instance.GetStorageTile(funnelTile);
+                if (storage == null)
                     continue;
                 
                 ResourceEntity resourceToPickup = storage.TryOutputResource();
@@ -92,16 +84,8 @@ public class CargoExchange : Machine
                 if (resource == null) continue;
 
                 Vector2Int funnelTile = GameManager.Vector3ToTile(outputFunnels[channel].transform.position);
-
-                // find out which cargo storage type we are connected to
-                Cart cart = GameManager.Instance.GetCart(funnelTile);
-                StructureEntity structure = GameManager.Instance.GetTileStructure(funnelTile);
-                CargoStorage storage;
-                if (cart is CargoCart cargoCart && cargoCart.train.speed <= 0)
-                    storage = cargoCart.storage;
-                else if (structure is CargoContainer cargoContainer)
-                    storage = cargoContainer.storage;
-                else
+                CargoStorage storage = GameManager.Instance.GetStorageTile(funnelTile);
+                if (storage == null)
                     continue;
 
                 if (storage.TryInputResource(resource, () =>

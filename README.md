@@ -21,7 +21,8 @@ Transport Nexus Inc is a simple tech game designed for ease of playing on both p
 ## Roadmap
 
 - void tool to delete items interactively
-- Migrate to new input system
+- Place structures with orientation
+- Migrate to new input system & use Canvas for building UI
 - Menus
 - Sounds
 - Models & Animations

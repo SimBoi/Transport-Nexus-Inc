@@ -8,18 +8,20 @@ using UnityEngine;
 // TODO: future improvement potentially avoid inheriting MonoBehaviour
 public class CargoStorage : MonoBehaviour, ISavableProperty
 {
-    [SerializeField] private int capacity = 10;
+    public int Capacity { get; private set; } = 10;
+    public int Count { get; private set; }
     private ResourceEntity[] cargo;
 
     public void Awake()
     {
-        cargo = new ResourceEntity[capacity];
+        cargo = new ResourceEntity[Capacity];
+        Count = 0;
     }
 
     public string GetStateJson()
     {
         return JsonConvert.SerializeObject((
-            capacity,
+            Capacity,
             Array.ConvertAll(cargo, c => c == null ? -1 : c.ID)
         ));
     }
@@ -29,10 +31,14 @@ public class CargoStorage : MonoBehaviour, ISavableProperty
         Dictionary<int, ISavable> idLookup)
     {
         var state = JsonConvert.DeserializeObject<(int, int[])>(stateJson);
-        capacity = state.Item1;
-        cargo = new ResourceEntity[capacity];
+        Capacity = state.Item1;
+        cargo = new ResourceEntity[Capacity];
+        Count = 0;
         for (int i = 0; i < state.Item2.Length; i++)
+        {
             cargo[i] = state.Item2[i] == -1 ? null : idLookup[state.Item2[i]] as ResourceEntity;
+            if (cargo[i] != null) Count++;
+        }
     }
 
     public void OnDestroy()
@@ -47,6 +53,7 @@ public class CargoStorage : MonoBehaviour, ISavableProperty
                 resource.ExitInventory(transform.position);
         for (int i = 0; i < cargo.Length; i++)
             cargo[i] = null;
+        Count = 0;
     }
 
     public bool TryInputResource(ResourceEntity resource, Action PrepareResource= null)
@@ -58,6 +65,7 @@ public class CargoStorage : MonoBehaviour, ISavableProperty
             PrepareResource?.Invoke();
             resource.EnterInventory();
             cargo[i] = resource;
+            Count++;
             return true;
         }
         return false;
@@ -72,6 +80,7 @@ public class CargoStorage : MonoBehaviour, ISavableProperty
             ResourceEntity resource = cargo[i];
             resource.ExitInventory(transform.position);
             cargo[i] = null;
+            Count--;
             return resource;
         }
         return null;

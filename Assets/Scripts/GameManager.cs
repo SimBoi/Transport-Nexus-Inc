@@ -1063,6 +1063,18 @@ public class GameManager : MonoBehaviour
         else if (_conveyors[tile] is ActuatorConveyorBelt actuatorConveyor) actuatorConveyor.ResourceExit(resource);
         else throw new Exception("No conveyor found at position: " + tile);
     }
+
+    public CargoStorage GetStorageTile(Vector2Int tile)
+    {
+        Cart cart = GetCart(tile);
+        StructureEntity structure = GetTileStructure(tile);
+        CargoStorage storage = null;
+        if (cart is CargoCart cargoCart && cargoCart.train.speed <= 0)
+            storage = cargoCart.storage;
+        else if (structure is CargoContainer cargoContainer)
+            storage = cargoContainer.storage;
+        return storage;
+    }
 }
 
 [CustomEditor(typeof(GameManager))]
