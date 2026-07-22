@@ -46,7 +46,7 @@ public class Chunk : MonoBehaviour
     public void ClearData()
     {
         if (!dataReady && dataGenerationTask != null) dataGenerationTask.Cancel();
-       dataGenerationTask = null;
+        dataGenerationTask = null;
     }
 
     public void ClearTilesMesh()
@@ -87,18 +87,18 @@ public class Chunk : MonoBehaviour
             // generate biome data
             FastNoiseLite biomeNoise = new(seed);
             biomeNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
-            biomeNoise.SetFrequency(0.1f);
+            biomeNoise.SetFrequency(0.001f);
             for (int x = 0; x < size; x++)
-            for (int z = 0; z < size; z++)
-            {
-                Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
-                float freq = 1;
-                float noise = biomeNoise.GetNoise(tileCoords.x * freq, tileCoords.y * freq);
-                if (noise <= 1)
+                for (int z = 0; z < size; z++)
                 {
-                    biomeMap[x, z] = Biome.LushPlains;
+                    Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
+                    float freq = 1;
+                    float noise = biomeNoise.GetNoise(tileCoords.x * freq, tileCoords.y * freq);
+                    if (noise <= 1)
+                    {
+                        biomeMap[x, z] = Biome.LushPlains;
+                    }
                 }
-            }
 
             // generate height data
             FastNoiseLite lushPlainsHeightNoise = new(seed + 1);
@@ -107,19 +107,19 @@ public class Chunk : MonoBehaviour
             lushPlainsHeightNoise.SetFractalType(FastNoiseLite.FractalType.FBm);
             lushPlainsHeightNoise.SetFractalOctaves(2);
             for (int x = 0; x < size; x++)
-            for (int z = 0; z < size; z++)
-            {
-                if (biomeMap[x, z] == Biome.LushPlains)
+                for (int z = 0; z < size; z++)
                 {
-                    Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
-                    float noise = lushPlainsHeightNoise.GetNoise(tileCoords.x, tileCoords.y);
-                    if (noise < -0.7f) heightMap[x, z] = 0;
-                    else if (noise < 0.4f) heightMap[x, z] = 1;
-                    else if (noise < 0.5f) heightMap[x, z] = 2;
-                    else if (noise < 0.6f) heightMap[x, z] = 3;
-                    else heightMap[x, z] = 4;
+                    if (biomeMap[x, z] == Biome.LushPlains)
+                    {
+                        Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
+                        float noise = lushPlainsHeightNoise.GetNoise(tileCoords.x, tileCoords.y);
+                        if (noise < -0.7f) heightMap[x, z] = 0;
+                        else if (noise < 0.4f) heightMap[x, z] = 1;
+                        else if (noise < 0.5f) heightMap[x, z] = 2;
+                        else if (noise < 0.6f) heightMap[x, z] = 3;
+                        else heightMap[x, z] = 4;
+                    }
                 }
-            }
 
             // generate vegetation data
             FastNoiseLite vegetationNoise = new(seed + 2);
@@ -143,28 +143,30 @@ public class Chunk : MonoBehaviour
             // generate resource node data
             FastNoiseLite ironNodesNoise = new(seed + 3);
             ironNodesNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
-            ironNodesNoise.SetFrequency(0.1f);
+            ironNodesNoise.SetFrequency(0.035f);
             ironNodesNoise.SetFractalType(FastNoiseLite.FractalType.FBm);
             ironNodesNoise.SetFractalOctaves(2);
             FastNoiseLite coalNodesNoise = new(seed + 4);
             coalNodesNoise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
-            coalNodesNoise.SetFrequency(0.1f);
+            coalNodesNoise.SetFrequency(0.035f);
             coalNodesNoise.SetFractalType(FastNoiseLite.FractalType.FBm);
             coalNodesNoise.SetFractalOctaves(2);
             for (int x = 0; x < size; x++)
-            for (int z = 0; z < size; z++)
             {
-                resourceNodeMap[x, z] = ResourceNode.None;
-                Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
-                if (clearedTiles.Contains(tileCoords))
-                if (biomeMap[x, z] == Biome.LushPlains)
+                for (int z = 0; z < size; z++)
                 {
-                    float ironNoise = ironNodesNoise.GetNoise(tileCoords.x, tileCoords.y);
-                    float coalNoise = coalNodesNoise.GetNoise(tileCoords.x, tileCoords.y);
-                    // prioritise certain materials by checking them first
-                    if (heightMap[x, z] != 1) resourceNodeMap[x, z] = ResourceNode.None;
-                    else if (ironNoise > 0.8f) resourceNodeMap[x, z] = ResourceNode.Iron;
-                    else if (coalNoise > 0.6f) resourceNodeMap[x, z] = ResourceNode.Coal;
+                    resourceNodeMap[x, z] = ResourceNode.None;
+                    Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
+                    if (clearedTiles.Contains(tileCoords)) continue;
+                    if (biomeMap[x, z] == Biome.LushPlains)
+                    {
+                        float ironNoise = ironNodesNoise.GetNoise(tileCoords.x, tileCoords.y);
+                        float coalNoise = coalNodesNoise.GetNoise(tileCoords.x, tileCoords.y);
+                        // prioritise certain materials by checking them first
+                        if (heightMap[x, z] != 1) resourceNodeMap[x, z] = ResourceNode.None;
+                        else if (ironNoise > 0.88f) resourceNodeMap[x, z] = ResourceNode.Iron;
+                        else if (coalNoise > 0.82f) resourceNodeMap[x, z] = ResourceNode.Coal;
+                    }
                 }
             }
 
@@ -174,25 +176,30 @@ public class Chunk : MonoBehaviour
             {
                 hashMaps.Add(seed + i, new int[size, size]);
                 for (int x = 0; x < size; x++)
-                for (int z = 0; z < size; z++)
                 {
-                    Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
-                    hashMaps[seed + i][x, z] = GetIntHash(seed + i, tileCoords.x, tileCoords.y);
+                    for (int z = 0; z < size; z++)
+                    {
+                        Vector2Int tileCoords = this.chunkCoords * size + new Vector2Int(x, z);
+                        hashMaps[seed + i][x, z] = GetIntHash(seed + i, tileCoords.x, tileCoords.y);
+                    }
                 }
             }
             for (int x = 0; x < size; x++)
-            for (int z = 0; z < size; z++)
             {
-                tileVariationMap[x, z] = hashMaps[seed][x, z] % ChunksManager.instance.lushPlainsTiles[heightMap[x, z]].Length;
-                vegetationVariationMap[x, z] = hashMaps[seed + 1][x, z] % ChunksManager.instance.lushPlainsVegetation.Length;
-                if (resourceNodeMap[x, z] != ResourceNode.None) resourceNodeVariationMap[x, z] = hashMaps[seed + 2][x, z] % ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]].Length;
+                for (int z = 0; z < size; z++)
+                {
+                    tileVariationMap[x, z] = hashMaps[seed][x, z] % ChunksManager.instance.lushPlainsTiles[heightMap[x, z]].Length;
+                    vegetationVariationMap[x, z] = hashMaps[seed + 1][x, z] % ChunksManager.instance.lushPlainsVegetation.Length;
+                    if (resourceNodeMap[x, z] == ResourceNode.None) continue;
+                    resourceNodeVariationMap[x, z] = hashMaps[seed + 2][x, z] % ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]].Length;
+                }
             }
 
             dataReady = true;
         }
         dataGenerationTask ??= Aux(seed, clearedTiles);
         try { await dataGenerationTask; }
-        catch (OperationCanceledException) {}
+        catch (OperationCanceledException) { }
     }
 
     private static void Print2DArray<T>(T[,] array)
@@ -224,7 +231,7 @@ public class Chunk : MonoBehaviour
         }
         tilesMeshGenerationTask ??= Aux();
         try { await tilesMeshGenerationTask; }
-        catch (OperationCanceledException) {}
+        catch (OperationCanceledException) { }
     }
 
     public async Awaitable GenerateVegetationMeshAsync()
@@ -239,10 +246,11 @@ public class Chunk : MonoBehaviour
             GenerateUnityMesh(threadSafeMesh, vegetationMesh, vegetationGameObject);
 
             vegetationMeshReady = true;
-        };
+        }
+        ;
         vegetationMeshGenerationTask ??= Aux();
         try { await vegetationMeshGenerationTask; }
-        catch (OperationCanceledException) {}
+        catch (OperationCanceledException) { }
     }
 
     public async Awaitable GenerateResourceNodesMeshAsync()
@@ -257,16 +265,19 @@ public class Chunk : MonoBehaviour
             GenerateUnityMesh(threadSafeMesh, resourceNodesMesh, resourceNodesGameObject);
 
             resourceNodesMeshReady = true;
-        };
+        }
+        ;
         resourceNodesMeshGenerationTask ??= Aux();
         try { await resourceNodesMeshGenerationTask; }
-        catch (OperationCanceledException) {}
+        catch (OperationCanceledException) { }
     }
 
     public void GenerateVegetationMeshSync()
     {
-        if (vegetationMeshGenerationTask != null && !vegetationMeshReady) throw new Exception("Cant run a synchronous generation task while an async generation task is already running");
-        if (!dataReady) throw new Exception("tried to generate mesh synchronously but data is not yet ready");
+        if (vegetationMeshGenerationTask != null && !vegetationMeshReady)
+            throw new Exception("Cant run a synchronous generation task while an async generation task is already running");
+        if (!dataReady)
+            throw new Exception("tried to generate mesh synchronously but data is not yet ready");
         vegetationMeshReady = false;
         ThreadSafeMesh threadSafeMesh = GenerateVegetationThreadSafeMesh();
         GenerateUnityMesh(threadSafeMesh, vegetationMesh, vegetationGameObject);
@@ -277,13 +288,13 @@ public class Chunk : MonoBehaviour
     {
         ThreadSafeMesh threadSafeMesh = null;
         for (int x = 0; x < size; x++)
-        for (int z = 0; z < size; z++)
-        {
-            Vector3 tileOffset = new(x, 0, z);
-            ThreadSafeMesh tileMesh = ChunksManager.instance.lushPlainsTiles[heightMap[x, z]][tileVariationMap[x, z]];
-            if (threadSafeMesh == null) threadSafeMesh = new(tileMesh, tileOffset);
-            else threadSafeMesh.Combine(tileMesh, tileOffset);
-        }
+            for (int z = 0; z < size; z++)
+            {
+                Vector3 tileOffset = new(x, 0, z);
+                ThreadSafeMesh tileMesh = ChunksManager.instance.lushPlainsTiles[heightMap[x, z]][tileVariationMap[x, z]];
+                if (threadSafeMesh == null) threadSafeMesh = new(tileMesh, tileOffset);
+                else threadSafeMesh.Combine(tileMesh, tileOffset);
+            }
         return threadSafeMesh;
     }
 
@@ -291,16 +302,16 @@ public class Chunk : MonoBehaviour
     {
         ThreadSafeMesh threadSafeMesh = null;
         for (int x = 0; x < size; x++)
-        for (int z = 0; z < size; z++)
-        {
-            if (!vegetationMap[x, z]) continue;
-            Vector3 tileOffset = new(x, 0, z);
-            ThreadSafeMesh tileMesh = ChunksManager.instance.lushPlainsTiles[heightMap[x, z]][tileVariationMap[x, z]];
-            ThreadSafeMesh singleVegetationMesh = ChunksManager.instance.lushPlainsVegetation[vegetationVariationMap[x, z]];
-            Vector3 vegetationOffset = tileOffset + new Vector3(0, tileMesh.MaxY, 0);
-            if (threadSafeMesh == null) threadSafeMesh = new(singleVegetationMesh, vegetationOffset);
-            else threadSafeMesh.Combine(singleVegetationMesh, vegetationOffset);
-        }
+            for (int z = 0; z < size; z++)
+            {
+                if (!vegetationMap[x, z]) continue;
+                Vector3 tileOffset = new(x, 0, z);
+                ThreadSafeMesh tileMesh = ChunksManager.instance.lushPlainsTiles[heightMap[x, z]][tileVariationMap[x, z]];
+                ThreadSafeMesh singleVegetationMesh = ChunksManager.instance.lushPlainsVegetation[vegetationVariationMap[x, z]];
+                Vector3 vegetationOffset = tileOffset + new Vector3(0, tileMesh.MaxY, 0);
+                if (threadSafeMesh == null) threadSafeMesh = new(singleVegetationMesh, vegetationOffset);
+                else threadSafeMesh.Combine(singleVegetationMesh, vegetationOffset);
+            }
         return threadSafeMesh;
     }
 
@@ -308,16 +319,16 @@ public class Chunk : MonoBehaviour
     {
         ThreadSafeMesh threadSafeMesh = null;
         for (int x = 0; x < size; x++)
-        for (int z = 0; z < size; z++)
-        {
-            if (resourceNodeMap[x, z] == ResourceNode.None) continue;
-            Vector3 tileOffset = new(x, 0, z);
-            ThreadSafeMesh tileMesh = ChunksManager.instance.lushPlainsTiles[heightMap[x, z]][tileVariationMap[x, z]];
-            ThreadSafeMesh resourceNodeMesh = ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]][resourceNodeVariationMap[x, z]];
-            Vector3 resourceNodeOffset = tileOffset + new Vector3(0, tileMesh.MaxY, 0);
-            if (threadSafeMesh == null) threadSafeMesh = new(resourceNodeMesh, resourceNodeOffset);
-            else threadSafeMesh.Combine(resourceNodeMesh, resourceNodeOffset);
-        }
+            for (int z = 0; z < size; z++)
+            {
+                if (resourceNodeMap[x, z] == ResourceNode.None) continue;
+                Vector3 tileOffset = new(x, 0, z);
+                ThreadSafeMesh tileMesh = ChunksManager.instance.lushPlainsTiles[heightMap[x, z]][tileVariationMap[x, z]];
+                ThreadSafeMesh resourceNodeMesh = ChunksManager.instance.lushPlainsResourceNodes[(int)resourceNodeMap[x, z]][resourceNodeVariationMap[x, z]];
+                Vector3 resourceNodeOffset = tileOffset + new Vector3(0, tileMesh.MaxY, 0);
+                if (threadSafeMesh == null) threadSafeMesh = new(resourceNodeMesh, resourceNodeOffset);
+                else threadSafeMesh.Combine(resourceNodeMesh, resourceNodeOffset);
+            }
         return threadSafeMesh;
     }
 

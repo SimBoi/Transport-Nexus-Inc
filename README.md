@@ -12,16 +12,16 @@ Transport Nexus Inc is a simple tech game designed for ease of playing on both p
 - Machines and funnels
 - Cargo carts
 - Camera Navigation
+- Storage Containers & Storage Monitor
+- Terrain Generation + building limits
 
 ## WIP
 
-- Terrain Generation + building limits
-- Storage Containers & Storage Monitor
+- Place structures with orientation
 
 ## Roadmap
 
 - void tool to delete items interactively
-- Place structures with orientation
 - Migrate to new input system & use Canvas for building UI
 - Menus
 - Sounds
@@ -38,4 +38,5 @@ Transport Nexus Inc is a simple tech game designed for ease of playing on both p
 - Fluids & water bodies
 - PCBs (create parts that contain complex signal logic)
 - Train not removing itself from all rail tiles properly
+- Optimize tiles in chunks
 
