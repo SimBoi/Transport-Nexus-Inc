@@ -3,9 +3,7 @@ using UnityEngine;
 using Signals;
 using Newtonsoft.Json;
 using Inventories;
-using System.Data;
 using System;
-using NUnit.Framework;
 
 namespace Structures
 {

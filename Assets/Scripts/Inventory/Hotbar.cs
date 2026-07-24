@@ -21,7 +21,6 @@ public class Hotbar : MonoBehaviour
     private GameObject selectedSlot = null;
     private bool isPointerInsideSelectedSlot = false;
     private GameObject draggedBuildableEntity = null;
-    public Vector2Int placementOrientation = Vector2Int.up;
 
     private void Start()
     {
@@ -123,7 +122,8 @@ public class Hotbar : MonoBehaviour
             Ray ray = Camera.main.ScreenPointToRay(((PointerEventData)data).position);
             if (Physics.Raycast(ray, out RaycastHit result))
             {
-                draggedBuildableEntity.transform.position = result.point;
+                GetTileAndOrientation(result.point + result.normal * 0.01f, out Vector2Int tile, out Vector2Int orientation);
+                draggedBuildableEntity.transform.SetPositionAndRotation(GameManager.TileToVector3(tile), Quaternion.LookRotation(new Vector3(orientation.x, 0, orientation.y), Vector3.up));
             }
         }
     }
@@ -138,9 +138,18 @@ public class Hotbar : MonoBehaviour
         Ray ray = Camera.main.ScreenPointToRay(pointerData.position);
         if (Physics.Raycast(ray, out RaycastHit result))
         {
-            Vector3 hitPoint = result.point + result.normal * 0.01f;
-            hotbar[selectedBuildableEntityindex].Place(hitPoint, placementOrientation, result.collider);
+            GetTileAndOrientation(result.point + result.normal * 0.01f, out Vector2Int tile, out Vector2Int orientation);
+            hotbar[selectedBuildableEntityindex].Place(tile, orientation, result.collider);
         }
+    }
+
+    private void GetTileAndOrientation(Vector3 hitpoint, out Vector2Int tile, out Vector2Int orientation)
+    {
+        tile = GameManager.Vector3ToTile(hitpoint);
+        Vector2 tileHitpoint = new Vector2(hitpoint.x, hitpoint.z) - tile;
+        Vector2Int candidate1 = hitpoint.z > tile.y ? Vector2Int.up : Vector2Int.down;
+        Vector2Int candidate2 = hitpoint.x > tile.x ? Vector2Int.right : Vector2Int.left;
+        orientation = Vector2.Distance(tileHitpoint, candidate1) < Vector2.Distance(tileHitpoint, candidate2) ? candidate1 : candidate2;
     }
 
     public void ExpandHotbar()

@@ -17,11 +17,10 @@ Transport Nexus Inc is a simple tech game designed for ease of playing on both p
 
 ## WIP
 
-- Place structures with orientation
+- void tool to delete items interactively
 
 ## Roadmap
 
-- void tool to delete items interactively
 - Migrate to new input system & use Canvas for building UI
 - Menus
 - Sounds

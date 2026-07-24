@@ -21,18 +21,16 @@ namespace Inventories
         public BuildableEntityType type;
         [HideInInspector] public int[] resourceCosts = new int[Enum.GetValues(typeof(ResourceType)).Length];
 
-        public bool Place(Vector3 position, Vector2Int placementOrientation, Collider collider)
+        public bool Place(Vector2Int tile, Vector2Int placementOrientation, Collider collider)
         {
             if (!GameManager.Instance.HasResources(resourceCosts)) return false;
 
             if (type == BuildableEntityType.Structure)
             {
-                Vector2Int tile = GameManager.Vector3ToTile(position);
                 if (!GameManager.Instance.AddStructure(tile, placementOrientation, gameObject)) return false;
             }
             else if (type == BuildableEntityType.Locomotive)
             {
-                Vector2Int tile = GameManager.Vector3ToTile(position);
                 if (!GameManager.Instance.BuildTrain(tile)) return false;
             }
             else if (type == BuildableEntityType.Cart)
