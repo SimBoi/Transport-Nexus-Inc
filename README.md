@@ -18,6 +18,7 @@ Transport Nexus Inc is a simple tech game designed for ease of playing on both p
 ## WIP
 
 - void tool to delete items interactively
+- deconstruct tool to bulk delete structures
 
 ## Roadmap
 
@@ -37,5 +38,8 @@ Transport Nexus Inc is a simple tech game designed for ease of playing on both p
 - Fluids & water bodies
 - PCBs (create parts that contain complex signal logic)
 - Train not removing itself from all rail tiles properly
-- Optimize tiles in chunks
+- drag to extend structures instead of repeated clicks
+- dont drop items from structures when rotating them
+- Optimize tile rendering in chunks
+- improve building structures with orientation
 
