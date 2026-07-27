@@ -256,6 +256,7 @@ public class Train : MonoBehaviour, ISavable
         isCrashed = true;
     }
 
+    // should behave like Object.Destroy, it schedules for destruction and should not error when called multiple times
     public void DestroyTrain()
     {
         for (int i = tilesPath.Count; i > 0; i--) StepOutOfTile(0);

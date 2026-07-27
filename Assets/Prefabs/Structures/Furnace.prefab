@@ -226,6 +226,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -501,7 +502,7 @@ GameObject:
   - component: {fileID: 5827558454170919474}
   - component: {fileID: 1601403978775934930}
   - component: {fileID: 975079536764039453}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: click collider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -517,8 +518,8 @@ Transform:
   m_GameObject: {fileID: 3962628867560024258}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.125, z: 0}
-  m_LocalScale: {x: 1, y: 0.25, z: 1}
+  m_LocalPosition: {x: 0.5, y: 0.858, z: 0.5}
+  m_LocalScale: {x: 1.55, y: 1.8367498, z: 1.55}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2176646576307123914}
@@ -542,8 +543,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 2, y: 1, z: 2}
-  m_Center: {x: 0.5, y: 0, z: 0.5}
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &975079536764039453
 MonoBehaviour:
   m_ObjectHideFlags: 0

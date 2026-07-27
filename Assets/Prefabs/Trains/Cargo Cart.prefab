@@ -121,10 +121,10 @@ BoxCollider:
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 55
+    m_Bits: 439
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
@@ -158,7 +158,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 972574dad50be40f6a153a3043f0b2a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CargoStorage
-  capacity: 10
 --- !u!54 &2549849901858298472
 Rigidbody:
   m_ObjectHideFlags: 0

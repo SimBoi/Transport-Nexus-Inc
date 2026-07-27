@@ -806,6 +806,15 @@ MonoBehaviour:
   selectionUi: {fileID: 1515700868}
   selectionBoxHeight: 4.68
   minSelectionDistance: 0.1
+  voidToolLayerMask:
+    serializedVersion: 2
+    m_Bits: 256
+  deconstructToolFirstLayerMask:
+    serializedVersion: 2
+    m_Bits: 64
+  deconstructToolSecondLayerMask:
+    serializedVersion: 2
+    m_Bits: 128
 --- !u!1 &366664249
 GameObject:
   m_ObjectHideFlags: 0

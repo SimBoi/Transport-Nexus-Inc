@@ -27,6 +27,9 @@ public class MouseControls : MonoBehaviour
     [SerializeField] private TileSelectionUI selectionUi;
     [SerializeField] private float selectionBoxHeight;
     [SerializeField] private float minSelectionDistance;
+    [SerializeField] private LayerMask voidToolLayerMask;
+    [SerializeField] private LayerMask deconstructToolFirstLayerMask;
+    [SerializeField] private LayerMask deconstructToolSecondLayerMask;
 
     void Start()
     {
@@ -47,17 +50,27 @@ public class MouseControls : MonoBehaviour
         }
         else if (mode == ControlsMode.VoidTool)
         {
-            var colliders = SelectArea(voidToolSelectionColor, ~0, minSelectionDistance);
+            var colliders = SelectArea(voidToolSelectionColor, voidToolLayerMask, minSelectionDistance);
             if (colliders != null)
                 for (int i = 0; i < colliders.Length; i++)
                     Debug.Log("Hit : " + colliders[i].name + i);
         }
         else if (mode == ControlsMode.DeconstructMode)
         {
-            var colliders = SelectArea(deconstructToolSelectionColor, ~0, minSelectionDistance, true);
+            var colliders = SelectArea(deconstructToolSelectionColor, deconstructToolFirstLayerMask, minSelectionDistance, true);
             if (colliders != null)
+            {
+                print("----------------------------------------------- layer 1");
+                foreach (Collider collider in colliders)
+                {
+                    if (collider.GetComponentInParent<Train>() is Train train)
+                        train.DestroyTrain();
+                }
+                colliders = SelectArea(deconstructToolSelectionColor, deconstructToolSecondLayerMask, minSelectionDistance, true);
+                print("----------------------------------------------- layer 2");
                 for (int i = 0; i < colliders.Length; i++)
                     Debug.Log("Hit : " + colliders[i].name + i);
+            }
         }
     }
 

@@ -157,6 +157,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -558,7 +559,7 @@ GameObject:
   - component: {fileID: 8751156054904839321}
   - component: {fileID: 9147152117360524991}
   - component: {fileID: 9112194653936101313}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: click collider
   m_TagString: Untagged
   m_Icon: {fileID: 0}

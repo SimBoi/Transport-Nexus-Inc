@@ -241,7 +241,7 @@ GameObject:
   - component: {fileID: 6778317402807357961}
   - component: {fileID: 2660695621846664980}
   - component: {fileID: 7350364799521522948}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: click collider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -257,8 +257,8 @@ Transform:
   m_GameObject: {fileID: 3280877733352965080}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.125, z: 0}
-  m_LocalScale: {x: 1, y: 0.25, z: 1}
+  m_LocalPosition: {x: 0, y: 0.25, z: 0}
+  m_LocalScale: {x: 1, y: 0.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 258614376962701184}
@@ -830,6 +830,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
