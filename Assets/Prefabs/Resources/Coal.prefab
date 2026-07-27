@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7085283927449066743}
   - component: {fileID: 4240863825824589309}
+  - component: {fileID: 7665616843222046670}
   m_Layer: 0
   m_Name: Coal
   m_TagString: Untagged
@@ -48,6 +49,27 @@ MonoBehaviour:
   resourceType: 1
   resourceEntityRadius: 0.2
   model: {fileID: 5358128358821731714}
+--- !u!135 &7665616843222046670
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3875453984488858362}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.05
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &5358128358821731714
 GameObject:
   m_ObjectHideFlags: 0

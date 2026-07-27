@@ -4,6 +4,7 @@ using Signals;
 using Newtonsoft.Json;
 using Inventories;
 using System;
+using System.Linq;
 
 namespace Structures
 {
@@ -302,7 +303,7 @@ namespace Structures
     public class DynamicRail : ConnectableStructure
     {
         public List<Vector2Int> trainOrientations { get; private set; } = new List<Vector2Int>(2) { Vector2Int.up, Vector2Int.down };
-        public List<Train> trains { get; private set; } = new List<Train>();
+        public HashSet<Train> trains { get; private set; } = new HashSet<Train>();
 
         public override string GetStateJson()
         {
@@ -311,7 +312,7 @@ namespace Structures
                 baseState = base.GetStateJson(),
                 inheritedState = JsonConvert.SerializeObject((
                     trainOrientations.ToArray(),
-                    trains.ConvertAll(t => t.ID).ToArray()
+                    Array.ConvertAll(trains.ToArray(), t => t.ID)
                 ))
             };
             return JsonConvert.SerializeObject(combinedState);
@@ -327,7 +328,7 @@ namespace Structures
             )>(combinedState.inheritedState);
 
             trainOrientations = new List<Vector2Int>(state.Item1);
-            trains = new List<Train>(state.Item2.Length);
+            trains = new HashSet<Train>(state.Item2.Length);
             foreach (int trainId in state.Item2) trains.Add((Train)idLookup[trainId]);
 
             OnOrientRail();
@@ -366,15 +367,18 @@ namespace Structures
 
         public bool TrainEnter(Train train)
         {
+            if (trains.Contains(train)) return false;
             trains.Add(train);
             OnTrainEnter(train);
             return true;
         }
 
-        public void TrainExit(Train train)
+        public bool TrainExit(Train train)
         {
+            if (!trains.Contains(train)) return false;
             OnTrainExit(train);
             trains.Remove(train);
+            return true;
         }
 
         public virtual void OnOrientRail() { }
@@ -384,14 +388,14 @@ namespace Structures
 
     public class SensorRail : Sensor
     {
-        public List<Train> trains { get; private set; } = new List<Train>();
+        public HashSet<Train> trains { get; private set; } = new HashSet<Train>();
 
         public override string GetStateJson()
         {
             CombinedState combinedState = new()
             {
                 baseState = base.GetStateJson(),
-                inheritedState = JsonConvert.SerializeObject(trains.ConvertAll(t => t.ID).ToArray())
+                inheritedState = JsonConvert.SerializeObject(Array.ConvertAll(trains.ToArray(), t => t.ID))
             };
             return JsonConvert.SerializeObject(combinedState);
         }
@@ -402,7 +406,7 @@ namespace Structures
             base.RestoreStateJson(combinedState.baseState, idLookup);
             var state = JsonConvert.DeserializeObject<int[]>(combinedState.inheritedState);
 
-            trains = new List<Train>(state.Length);
+            trains = new HashSet<Train>(state.Length);
             foreach (int trainId in state) trains.Add((Train)idLookup[trainId]);
         }
 
@@ -426,10 +430,12 @@ namespace Structures
             return true;
         }
 
-        public void TrainExit(Train train)
+        public bool TrainExit(Train train)
         {
+            if (!trains.Contains(train)) return false;
             OnTrainExit(train);
             trains.Remove(train);
+            return true;
         }
 
         protected virtual void OnTrainEnter(Train train) { }
@@ -438,14 +444,14 @@ namespace Structures
 
     public class ActuatorRail : Actuator
     {
-        public List<Train> trains { get; private set; } = new List<Train>();
+        public HashSet<Train> trains { get; private set; } = new HashSet<Train>();
 
         public override string GetStateJson()
         {
             CombinedState combinedState = new()
             {
                 baseState = base.GetStateJson(),
-                inheritedState = JsonConvert.SerializeObject(trains.ConvertAll(t => t.ID).ToArray())
+                inheritedState = JsonConvert.SerializeObject(Array.ConvertAll(trains.ToArray(), t => t.ID))
             };
             return JsonConvert.SerializeObject(combinedState);
         }
@@ -456,7 +462,7 @@ namespace Structures
             base.RestoreStateJson(combinedState.baseState, idLookup);
             var state = JsonConvert.DeserializeObject<int[]>(combinedState.inheritedState);
 
-            trains = new List<Train>(state.Length);
+            trains = new HashSet<Train>(state.Length);
             foreach (int trainId in state) trains.Add((Train)idLookup[trainId]);
         }
 
@@ -480,10 +486,12 @@ namespace Structures
             return true;
         }
 
-        public void TrainExit(Train train)
+        public bool TrainExit(Train train)
         {
+            if (!trains.Contains(train)) return false;
             OnTrainExit(train);
             trains.Remove(train);
+            return true;
         }
 
         protected virtual void OnTrainEnter(Train train) { }

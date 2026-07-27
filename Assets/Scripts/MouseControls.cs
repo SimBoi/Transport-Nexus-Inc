@@ -1,16 +1,25 @@
 using UnityEngine;
 using System.Collections.Generic;
+using Structures;
+using Inventories;
 
+[System.Serializable]
 public enum ControlsMode
 {
     Navigation,
-    VoidTool,
-    DeconstructMode
+    Void,
+    Deconstruct
 }
 
+[RequireComponent(typeof(Camera))]
 public class MouseControls : MonoBehaviour
 {
     public ControlsMode mode;
+    public int ModeInt
+    {
+        get { return (int)mode; }
+        set { mode = (ControlsMode)value; }
+    }
     [SerializeField] private Color voidToolSelectionColor;
     [SerializeField] private Color deconstructToolSelectionColor;
     private Vector3 viewAnchor;
@@ -48,28 +57,26 @@ public class MouseControls : MonoBehaviour
             // smoothly interpolate to the target camera position
             transform.position = Vector3.Lerp(transform.position, viewTarget, 1 - Mathf.Exp(-smoothnessLambda * Time.deltaTime));
         }
-        else if (mode == ControlsMode.VoidTool)
+        else if (mode == ControlsMode.Void)
         {
             var colliders = SelectArea(voidToolSelectionColor, voidToolLayerMask, minSelectionDistance);
             if (colliders != null)
-                for (int i = 0; i < colliders.Length; i++)
-                    Debug.Log("Hit : " + colliders[i].name + i);
+                foreach (Collider collider in colliders)
+                    if (collider.GetComponent<ResourceEntity>() is ResourceEntity resource)
+                        resource.DestroyResource();
         }
-        else if (mode == ControlsMode.DeconstructMode)
+        else if (mode == ControlsMode.Deconstruct)
         {
             var colliders = SelectArea(deconstructToolSelectionColor, deconstructToolFirstLayerMask, minSelectionDistance, true);
             if (colliders != null)
             {
-                print("----------------------------------------------- layer 1");
                 foreach (Collider collider in colliders)
-                {
                     if (collider.GetComponentInParent<Train>() is Train train)
                         train.DestroyTrain();
-                }
                 colliders = SelectArea(deconstructToolSelectionColor, deconstructToolSecondLayerMask, minSelectionDistance, true);
-                print("----------------------------------------------- layer 2");
-                for (int i = 0; i < colliders.Length; i++)
-                    Debug.Log("Hit : " + colliders[i].name + i);
+                foreach (Collider collider in colliders)
+                    if (collider.GetComponentInParent<StructureEntity>() is StructureEntity structure)
+                        GameManager.Instance.RemoveStructure(structure.tile);
             }
         }
     }
@@ -139,7 +146,7 @@ public class MouseControls : MonoBehaviour
         }
 
         // raycast the selection area when the interactive selection ends
-        if (Input.GetMouseButtonUp(0))
+        if (Input.GetMouseButtonUp(0) && Vector2.Distance(selectionAnchor, selectionTarget) >= minDistance)
         {
             selectionUi.gameObject.SetActive(false);
 

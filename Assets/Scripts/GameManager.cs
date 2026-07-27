@@ -28,7 +28,7 @@ public class GameManager : MonoBehaviour
     private Dictionary<Vector2Int, StructureEntity> _conveyors = new();
     private Dictionary<Vector2Int, Machine> _machines = new();
 
-    private List<Train> _trains = new();
+    private HashSet<Train> _trains = new();
 
     private bool _isFocused = false;
     private GameObject _focusedStructure;
@@ -994,31 +994,35 @@ public class GameManager : MonoBehaviour
         return true;
     }
 
+    // should behave like Object.Destroy, it schedules for destruction and should not error when called multiple times
     public void DestroyTrain(Train train)
     {
+        if (!_trains.Contains(train)) return;
         _trains.Remove(train);
         train.DestroyTrain();
     }
 
-    public void TrainEnterTile(Train train, Vector2Int tile)
+    public bool TrainEnterTile(Train train, Vector2Int tile)
     {
-        if (_rails[tile] is DynamicRail dynamicRail) dynamicRail.TrainEnter(train);
-        else if (_rails[tile] is SensorRail sensorRail) sensorRail.TrainEnter(train);
-        else if (_rails[tile] is ActuatorRail actuatorRail) actuatorRail.TrainEnter(train);
+        if (_rails[tile] is DynamicRail dynamicRail) return dynamicRail.TrainEnter(train);
+        else if (_rails[tile] is SensorRail sensorRail) return sensorRail.TrainEnter(train);
+        else if (_rails[tile] is ActuatorRail actuatorRail) return actuatorRail.TrainEnter(train);
+        throw new("no rail tile to enter into");
     }
 
-    public void TrainExitTile(Train train, Vector2Int tile)
+    public bool TrainExitTile(Train train, Vector2Int tile)
     {
-        if (_rails[tile] is DynamicRail dynamicRail) dynamicRail.TrainExit(train);
-        else if (_rails[tile] is SensorRail sensorRail) sensorRail.TrainExit(train);
-        else if (_rails[tile] is ActuatorRail actuatorRail) actuatorRail.TrainExit(train);
+        if (_rails[tile] is DynamicRail dynamicRail) return dynamicRail.TrainExit(train);
+        else if (_rails[tile] is SensorRail sensorRail) return sensorRail.TrainExit(train);
+        else if (_rails[tile] is ActuatorRail actuatorRail) return actuatorRail.TrainExit(train);
+        throw new("no rail tile to exit from");
     }
 
     public Cart GetCart(Vector2Int tile)
     {
         if (!_rails.ContainsKey(tile)) return null;
 
-        List<Train> trains;
+        HashSet<Train> trains;
         if (_rails[tile] is DynamicRail dynamicRail) trains = dynamicRail.trains;
         else if (_rails[tile] is SensorRail sensorRail) trains = sensorRail.trains;
         else if (_rails[tile] is ActuatorRail actuatorRail) trains = actuatorRail.trains;

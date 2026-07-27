@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4391709269064352752}
   - component: {fileID: 874479287665677237}
+  - component: {fileID: 4728342287786539677}
   m_Layer: 0
   m_Name: Wood
   m_TagString: Untagged
@@ -45,9 +46,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f7238ae72e81a934eb5ac85f799b3883, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  materialType: 0
-  resourceRadius: 0.4
+  resourceType: 0
+  resourceEntityRadius: 0.2
   model: {fileID: 5152341077480636778}
+--- !u!135 &4728342287786539677
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3318929349999408539}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.05
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &5152341077480636778
 GameObject:
   m_ObjectHideFlags: 0
@@ -109,6 +131,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -130,7 +154,9 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}

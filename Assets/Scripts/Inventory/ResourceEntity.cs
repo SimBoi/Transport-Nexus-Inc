@@ -196,6 +196,7 @@ namespace Inventories
             return Vector3.LerpUnclamped(pathHalfSegments[prevSegment], pathHalfSegments[nextSegment], interpolation);
         }
 
+        // should not error if called multiple times
         public void DestroyResource()
         {
             if (isOnBelt) ExitConveyPath();

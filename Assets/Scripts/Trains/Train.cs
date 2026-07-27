@@ -148,7 +148,8 @@ public class Train : MonoBehaviour, ISavable
 
     private void StepOutOfTile(int index)
     {
-        GameManager.Instance.TrainExitTile(this, tilesPath[index]);
+        // do nothing if tain is not in tile
+        if (!GameManager.Instance.TrainExitTile(this, tilesPath[index])) return;
         headInterpolation -= 2;
         tilesPath.RemoveAt(index);
         pathHalfSegments.RemoveAt(index);
