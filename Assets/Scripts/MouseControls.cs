@@ -4,13 +4,15 @@ using System.Collections.Generic;
 public enum ControlsMode
 {
     Navigation,
-    VoidTool
+    VoidTool,
+    DeconstructMode
 }
 
 public class MouseControls : MonoBehaviour
 {
     public ControlsMode mode;
     [SerializeField] private Color voidToolSelectionColor;
+    [SerializeField] private Color deconstructToolSelectionColor;
     private Vector3 viewAnchor;
     private Camera cam;
     private Vector3 viewTarget;
@@ -20,9 +22,11 @@ public class MouseControls : MonoBehaviour
     private Plane worldPlane;
     private Plane viewPlane;
     [SerializeField] private float smoothnessLambda;
-    private Vector2Int selectionAnchor;
-    private Vector2Int selectionTarget;
+    private Vector2 selectionAnchor;
+    private Vector2 selectionTarget;
     [SerializeField] private TileSelectionUI selectionUi;
+    [SerializeField] private float selectionBoxHeight;
+    [SerializeField] private float minSelectionDistance;
 
     void Start()
     {
@@ -43,7 +47,17 @@ public class MouseControls : MonoBehaviour
         }
         else if (mode == ControlsMode.VoidTool)
         {
-            SelectArea(voidToolSelectionColor);
+            var colliders = SelectArea(voidToolSelectionColor, ~0, minSelectionDistance);
+            if (colliders != null)
+                for (int i = 0; i < colliders.Length; i++)
+                    Debug.Log("Hit : " + colliders[i].name + i);
+        }
+        else if (mode == ControlsMode.DeconstructMode)
+        {
+            var colliders = SelectArea(deconstructToolSelectionColor, ~0, minSelectionDistance, true);
+            if (colliders != null)
+                for (int i = 0; i < colliders.Length; i++)
+                    Debug.Log("Hit : " + colliders[i].name + i);
         }
     }
 
@@ -77,31 +91,51 @@ public class MouseControls : MonoBehaviour
         }
     }
 
-    bool SelectArea(Color color)
+    Collider[] SelectArea(Color color, LayerMask layerMask, float minDistance = 0, bool tileMode = false)
     {
-        // user clicks on the screen, save the 3d point under the cursor
         if (Input.GetMouseButtonDown(0))
         {
             Ray ray = cam.ScreenPointToRay(Input.mousePosition);
             worldPlane.Raycast(ray, out float enter);
-            selectionAnchor = GameManager.Vector3ToTile(ray.GetPoint(enter));
-            selectionUi.gameObject.SetActive(true);
+            selectionAnchor = ray.GetPoint(enter);
+            if (tileMode)
+                selectionAnchor = GameManager.Vector3ToTile(ray.GetPoint(enter));
+            else
+                selectionAnchor = new Vector2(ray.GetPoint(enter).x, ray.GetPoint(enter).z);
         }
 
-        // user starts dragging, update the target position to the position where the selection would be end
         if (Input.GetMouseButton(0))
         {
             Ray ray = cam.ScreenPointToRay(Input.mousePosition);
             worldPlane.Raycast(ray, out float enter);
-            selectionTarget = GameManager.Vector3ToTile(ray.GetPoint(enter));
-            selectionUi.UpdateQuad(selectionAnchor, selectionTarget, color);
+            selectionTarget = ray.GetPoint(enter);
+            if (tileMode)
+                selectionTarget = GameManager.Vector3ToTile(ray.GetPoint(enter));
+            else
+                selectionTarget = new Vector2(ray.GetPoint(enter).x, ray.GetPoint(enter).z);
+            if (Vector2.Distance(selectionAnchor, selectionTarget) >= minDistance)
+            {
+                selectionUi.gameObject.SetActive(true);
+                selectionUi.UpdateQuad(selectionAnchor, selectionTarget, color, tileMode ? 0.5f : 0);
+            }
+            else
+            {
+                selectionUi.gameObject.SetActive(false);
+                return null;
+            }
         }
 
+        // raycast the selection area when the interactive selection ends
         if (Input.GetMouseButtonUp(0))
         {
             selectionUi.gameObject.SetActive(false);
-            return true;
+
+            var center2d = (selectionAnchor + selectionTarget) / 2;
+            var center = new Vector3(center2d.x, 0, center2d.y);
+            var delta = selectionAnchor - selectionTarget;
+            var halfExtents = new Vector3(Mathf.Abs(delta.x / 2), selectionBoxHeight, Mathf.Abs(delta.y / 2));
+            return Physics.OverlapBox(center, halfExtents, Quaternion.identity, layerMask);
         }
-        return false;
+        return null;
     }
 }

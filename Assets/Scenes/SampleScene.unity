@@ -799,10 +799,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MouseLook
   mode: 0
   voidToolSelectionColor: {r: 1, g: 0, b: 0, a: 0.7019608}
+  deconstructToolSelectionColor: {r: 0, g: 1, b: 0.9556168, a: 0.49803922}
   viewDistanceRange: {x: 10, y: 80}
   zoomSensitivity: 1
   smoothnessLambda: 12
   selectionUi: {fileID: 1515700868}
+  selectionBoxHeight: 4.68
+  minSelectionDistance: 0.1
 --- !u!1 &366664249
 GameObject:
   m_ObjectHideFlags: 0
@@ -2470,7 +2473,6 @@ MonoBehaviour:
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  canvas: {fileID: 1450039602}
   cam: {fileID: 330585545}
 --- !u!222 &1515700869
 CanvasRenderer:

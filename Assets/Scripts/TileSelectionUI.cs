@@ -1,32 +1,33 @@
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
 [RequireComponent(typeof(CanvasRenderer))]
 public class TileSelectionUI : Graphic
 {
-    [SerializeField] private RectTransform canvas;
-    [SerializeField] private Camera cam;
     private readonly Vector2[] canvasCorners = new Vector2[4];
+    private readonly Vector3[] worldCorners = new Vector3[4];
+    [SerializeField] private Camera cam;
 
-    public void UpdateQuad(Vector2 point1, Vector2 point2, Color color)
+    public void UpdateQuad(Vector2 point1, Vector2 point2, Color color, float extend = 0)
     {
-        float minX = Mathf.Min(point1.x, point2.x) - 0.5f;
-        float minZ = Mathf.Min(point1.y, point2.y) - 0.5f;
-        float maxX = Mathf.Max(point1.x, point2.x) + 0.5f;
-        float maxZ = Mathf.Max(point1.y, point2.y) + 0.5f;
-        var corners = new Vector3[4];
-        corners[0].x = minX;
-        corners[0].z = minZ;
-        corners[1].x = minX;
-        corners[1].z = maxZ;
-        corners[2].x = maxX;
-        corners[2].z = maxZ;
-        corners[3].x = maxX;
-        corners[3].z = minZ;
+        // world space
+        float minX = Mathf.Min(point1.x, point2.x) - extend;
+        float minZ = Mathf.Min(point1.y, point2.y) - extend;
+        float maxX = Mathf.Max(point1.x, point2.x) + extend;
+        float maxZ = Mathf.Max(point1.y, point2.y) + extend;
+        worldCorners[0].x = minX;
+        worldCorners[0].z = minZ;
+        worldCorners[1].x = minX;
+        worldCorners[1].z = maxZ;
+        worldCorners[2].x = maxX;
+        worldCorners[2].z = maxZ;
+        worldCorners[3].x = maxX;
+        worldCorners[3].z = minZ;
         for (int i = 0; i < 4; i++)
         {
-            corners[i] = cam.WorldToScreenPoint(corners[i]);
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas, corners[i], null, out canvasCorners[i]);
+            var screenCorner = cam.WorldToScreenPoint(worldCorners[i]);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)canvas.transform, screenCorner, null, out canvasCorners[i]);
         }
         this.color = color;
         SetVerticesDirty();
