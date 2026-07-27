@@ -14,15 +14,14 @@ Transport Nexus Inc is a simple tech game designed for ease of playing on both p
 - Camera Navigation
 - Storage Containers & Storage Monitor
 - Terrain Generation + building limits
+- Selection tools
 
 ## WIP
 
-- void tool to delete items interactively
-- deconstruct tool to bulk delete structures
+- Migrate to new input system & use Canvas for building UI
 
 ## Roadmap
 
-- Migrate to new input system & use Canvas for building UI
 - Menus
 - Sounds
 - Models & Animations

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 4391709269064352752}
   - component: {fileID: 874479287665677237}
   - component: {fileID: 4728342287786539677}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Wood
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -59,10 +59,10 @@ SphereCollider:
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 256
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 247
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
@@ -81,7 +81,7 @@ GameObject:
   - component: {fileID: 9145090450692879708}
   - component: {fileID: 3011779213546967358}
   - component: {fileID: 7249989740998401499}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Cube
   m_TagString: Untagged
   m_Icon: {fileID: 0}

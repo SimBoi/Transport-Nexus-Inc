@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 7085283927449066743}
   - component: {fileID: 4240863825824589309}
   - component: {fileID: 7665616843222046670}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Coal
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -59,10 +59,10 @@ SphereCollider:
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 256
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 247
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
@@ -81,7 +81,7 @@ GameObject:
   - component: {fileID: 9090990149281797802}
   - component: {fileID: 9070267058322175462}
   - component: {fileID: 9104158904688001070}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Cube
   m_TagString: Untagged
   m_Icon: {fileID: 0}

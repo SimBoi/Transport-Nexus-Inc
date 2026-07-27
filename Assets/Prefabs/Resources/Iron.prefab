@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 806270692589182244}
   - component: {fileID: 8983157416241620862}
   - component: {fileID: -1309564258636676651}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Iron
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -59,10 +59,10 @@ SphereCollider:
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 256
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 247
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
@@ -81,7 +81,7 @@ GameObject:
   - component: {fileID: 323573181992817534}
   - component: {fileID: 8164171405015898871}
   - component: {fileID: 5317189390644986992}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Cube
   m_TagString: Untagged
   m_Icon: {fileID: 0}
