@@ -2,6 +2,8 @@ using UnityEngine;
 using System.Collections.Generic;
 using Structures;
 using Inventories;
+using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 
 [System.Serializable]
 public enum ControlsMode
@@ -39,9 +41,14 @@ public class MouseControls : MonoBehaviour
     [SerializeField] private LayerMask voidToolLayerMask;
     [SerializeField] private LayerMask deconstructToolFirstLayerMask;
     [SerializeField] private LayerMask deconstructToolSecondLayerMask;
+    private InputAction pointerInput;
+    private InputAction zoomInput;
+    private bool wasPointerPressedOverUI;
 
     void Start()
     {
+        pointerInput = InputSystem.actions.FindAction("Pointer");
+        zoomInput = InputSystem.actions.FindAction("Zoom");
         cam = GetComponent<Camera>();
         worldPlane = new Plane(Vector3.up, Vector3.zero);
         viewTarget = transform.position;
@@ -50,9 +57,25 @@ public class MouseControls : MonoBehaviour
 
     void Update()
     {
+        if (pointerInput.WasPressedThisFrame())
+        {
+            wasPointerPressedOverUI = false;
+
+            var eventDataCurrentPosition = new PointerEventData(EventSystem.current)
+            {
+                position = pointerInput.ReadValue<Vector2>()
+            };
+            var results = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(eventDataCurrentPosition, results);
+
+            for (int i = 0; i < results.Count; i++)
+                if (results[i].gameObject.layer == 5) //5 = UI layer
+                    wasPointerPressedOverUI = true;
+        }
+
         if (mode == ControlsMode.Navigation)
         {
-            ChangeViewDistance(-Input.mouseScrollDelta.y * zoomSensitivity);
+            ChangeViewDistance(-zoomInput.ReadValue<Vector2>().y * zoomSensitivity);
             ChangeViewPosition();
             // smoothly interpolate to the target camera position
             transform.position = Vector3.Lerp(transform.position, viewTarget, 1 - Mathf.Exp(-smoothnessLambda * Time.deltaTime));
@@ -95,17 +118,17 @@ public class MouseControls : MonoBehaviour
     void ChangeViewPosition()
     {
         // user clicks on the screen, save the 3d point under the cursor
-        if (Input.GetMouseButtonDown(2))
+        if (!wasPointerPressedOverUI && pointerInput.WasPressedThisFrame())
         {
-            Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+            Ray ray = cam.ScreenPointToRay(pointerInput.ReadValue<Vector2>());
             worldPlane.Raycast(ray, out float enter);
             viewAnchor = ray.GetPoint(enter);
         }
 
         // user starts dragging, update the target camera position to the position where the anchor would be under the new cursor position
-        if (Input.GetMouseButton(2))
+        if (!wasPointerPressedOverUI && pointerInput.IsPressed())
         {
-            Ray targetRay = new(viewAnchor, -cam.ScreenPointToRay(Input.mousePosition).direction);
+            Ray targetRay = new(viewAnchor, -cam.ScreenPointToRay(pointerInput.ReadValue<Vector2>()).direction);
             viewPlane.Raycast(targetRay, out float enter);
             viewTarget = targetRay.GetPoint(enter);
         }
@@ -113,9 +136,9 @@ public class MouseControls : MonoBehaviour
 
     Collider[] SelectArea(Color color, LayerMask layerMask, float minDistance = 0, bool tileMode = false)
     {
-        if (Input.GetMouseButtonDown(0))
+        if (!wasPointerPressedOverUI && pointerInput.WasPressedThisFrame())
         {
-            Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+            Ray ray = cam.ScreenPointToRay(pointerInput.ReadValue<Vector2>());
             worldPlane.Raycast(ray, out float enter);
             selectionAnchor = ray.GetPoint(enter);
             if (tileMode)
@@ -124,9 +147,9 @@ public class MouseControls : MonoBehaviour
                 selectionAnchor = new Vector2(ray.GetPoint(enter).x, ray.GetPoint(enter).z);
         }
 
-        if (Input.GetMouseButton(0))
+        if (!wasPointerPressedOverUI && pointerInput.IsPressed())
         {
-            Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+            Ray ray = cam.ScreenPointToRay(pointerInput.ReadValue<Vector2>());
             worldPlane.Raycast(ray, out float enter);
             selectionTarget = ray.GetPoint(enter);
             if (tileMode)
@@ -146,7 +169,7 @@ public class MouseControls : MonoBehaviour
         }
 
         // raycast the selection area when the interactive selection ends
-        if (Input.GetMouseButtonUp(0) && Vector2.Distance(selectionAnchor, selectionTarget) >= minDistance)
+        if (!wasPointerPressedOverUI && pointerInput.WasReleasedThisFrame() && Vector2.Distance(selectionAnchor, selectionTarget) >= minDistance)
         {
             selectionUi.gameObject.SetActive(false);
 
