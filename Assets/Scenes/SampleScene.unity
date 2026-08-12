@@ -910,15 +910,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7ac2f77829c62c431a6c00aba2c4d42f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MouseLook
-  mode: 0
-  voidToolSelectionColor: {r: 1, g: 0, b: 0, a: 0.7019608}
-  deconstructToolSelectionColor: {r: 0, g: 1, b: 0.9556168, a: 0.49803922}
   viewDistanceRange: {x: 10, y: 80}
   zoomSensitivity: 1
   smoothnessLambda: 12
+  minDragDistance: 0
+  voidToolSelectionColor: {r: 1, g: 0, b: 0, a: 0.7019608}
+  deconstructToolSelectionColor: {r: 0, g: 1, b: 0.9556168, a: 0.49803922}
   selectionUi: {fileID: 1515700868}
   selectionBoxHeight: 5
   minSelectionDistance: 0.1
+  focusStructureLayerMask:
+    serializedVersion: 2
+    m_Bits: 128
   voidToolLayerMask:
     serializedVersion: 2
     m_Bits: 256
@@ -1669,6 +1672,59 @@ MonoBehaviour:
   collapsed: {fileID: 431950727}
   hotbarSlotPrefab: {fileID: 7851078394814731853, guid: f41cb01afc9f52247b69945db3a9d4c8, type: 3}
   spacing: 50
+--- !u!1 &735854906
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 735854908}
+  - component: {fileID: 735854907}
+  m_Layer: 0
+  m_Name: Ground Collider
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!65 &735854907
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 735854906}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!4 &735854908
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 735854906}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -5, z: 0}
+  m_LocalScale: {x: 1000, y: 10, z: 1000}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &741884099
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1843,6 +1899,7 @@ GameObject:
   - component: {fileID: 849192458}
   - component: {fileID: 849192457}
   - component: {fileID: 849192456}
+  - component: {fileID: 849192459}
   m_Layer: 0
   m_Name: EventSystem
   m_TagString: Untagged
@@ -1911,6 +1968,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &849192459
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 849192455}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e1330cc0a8a23adcb9fdf9c42f92b9b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WorldInput
 --- !u!1001 &871504128
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2289,90 +2358,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1146582533}
   m_CullTransparentMesh: 1
---- !u!1 &1294734604
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1294734608}
-  - component: {fileID: 1294734605}
-  - component: {fileID: 1294734609}
-  m_Layer: 0
-  m_Name: Plane
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!64 &1294734605
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1294734604}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!4 &1294734608
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1294734604}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.5, y: 0, z: -0.5}
-  m_LocalScale: {x: 100, y: 1, z: 100}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1294734609
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1294734604}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d0b148fe25e99eb48b9724523833bab1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Delegates:
-  - eventID: 4
-    callback:
-      m_PersistentCalls:
-        m_Calls:
-        - m_Target: {fileID: 1709670103}
-          m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
-          m_MethodName: UnfocusAll
-          m_Mode: 1
-          m_Arguments:
-            m_ObjectArgument: {fileID: 0}
-            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-            m_IntArgument: 0
-            m_FloatArgument: 0
-            m_StringArgument: 
-            m_BoolArgument: 0
-          m_CallState: 2
 --- !u!1 &1433781014
 GameObject:
   m_ObjectHideFlags: 0
@@ -3523,9 +3508,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ChunksManager
   chunkPrefab: {fileID: 4165186504263952819, guid: aea4c298eabd5990f842fb7080363656, type: 3}
   center: {fileID: 330585546}
-  renderDistance: 8
-  generateDistance: 10
-  unloadDistance: 12
+  renderDistance: 10
+  generateDistance: 12
+  unloadDistance: 14
   seed: 0
   lushPlainsTilePrefabs:
   - array:
@@ -4763,7 +4748,7 @@ SceneRoots:
   - {fileID: 1450039602}
   - {fileID: 330585546}
   - {fileID: 410087041}
-  - {fileID: 1294734608}
+  - {fileID: 735854908}
   - {fileID: 2027748610}
   - {fileID: 769552045}
   - {fileID: 1758874792}
