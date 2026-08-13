@@ -2,6 +2,8 @@ using UnityEngine;
 using Structures;
 using Inventories;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
+using System.Collections.Generic;
 
 [RequireComponent(typeof(Camera))]
 public class PlayerControls : MonoBehaviour
@@ -18,7 +20,6 @@ public class PlayerControls : MonoBehaviour
     [SerializeField] float minDragDistance;
     [SerializeField] Color voidToolSelectionColor;
     [SerializeField] Color deconstructToolSelectionColor;
-    Vector2 focusTarget;
     Vector2 selectionAnchor;
     Vector2 selectionTarget;
     [SerializeField] TileSelectionUI selectionUi;
@@ -32,11 +33,13 @@ public class PlayerControls : MonoBehaviour
     InputActionMap deconstructToolMap;
     InputActionMap voidToolMap;
     InputAction pointAction;
+    InputAction clickAction;
     InputAction navigateAction;
     InputAction focusStructureAction;
     InputAction zoomAction;
     InputAction deconstructToolSelectAreaAction;
     InputAction voidToolSelectAreaAction;
+    InputAction[] uiBlockableActions;
 
     void Start()
     {
@@ -49,12 +52,21 @@ public class PlayerControls : MonoBehaviour
         deconstructToolMap = InputSystem.actions.FindActionMap("DeconstructTool");
         voidToolMap = InputSystem.actions.FindActionMap("VoidTool");
 
-        pointAction = InputSystem.actions.FindAction("Point");
+        pointAction = InputSystem.actions.FindAction("UI/Point");
+        clickAction = InputSystem.actions.FindAction("UI/Click");
+
         navigateAction = defaultMap.FindAction("Navigate");
         focusStructureAction = defaultMap.FindAction("FocusStructure");
         zoomAction = defaultMap.FindAction("Zoom");
         deconstructToolSelectAreaAction = deconstructToolMap.FindAction("SelectArea");
-        voidToolSelectAreaAction = deconstructToolMap.FindAction("SelectArea");
+        voidToolSelectAreaAction = voidToolMap.FindAction("SelectArea");
+
+        uiBlockableActions = new[] {
+            navigateAction,
+            focusStructureAction,
+            deconstructToolSelectAreaAction,
+            voidToolSelectAreaAction
+        };
 
         // set default active InputActionMap
         defaultMap.Enable();
@@ -62,8 +74,18 @@ public class PlayerControls : MonoBehaviour
         voidToolMap.Disable();
     }
 
+    public void ChangeInputActionMap(string newMap)
+    {
+        defaultMap.Disable();
+        deconstructToolMap.Disable();
+        voidToolMap.Disable();
+        InputSystem.actions.FindActionMap(newMap).Enable();
+    }
+
     void Update()
     {
+        BlockUIClickThrough();
+
         if (defaultMap.enabled)
         {
             ChangeViewDistance(-zoomAction.ReadValue<Vector2>().y * zoomSensitivity);
@@ -149,12 +171,10 @@ public class PlayerControls : MonoBehaviour
 
     void FocusStructure()
     {
-        if (focusStructureAction.IsPressed())
-            focusTarget = pointAction.ReadValue<Vector2>();
-        if (!focusStructureAction.WasReleasedThisFrame() || focusTarget == Vector2.zero)
+        if (!focusStructureAction.WasPerformedThisFrame())
             return;
 
-        Ray ray = cam.ScreenPointToRay(focusTarget);
+        Ray ray = cam.ScreenPointToRay(pointAction.ReadValue<Vector2>());
         Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, focusStructureLayerMask);
 
         if (hit.collider == null || hit.collider.GetComponentInParent<StructureUI>() is not StructureUI structureUI)
@@ -209,5 +229,42 @@ public class PlayerControls : MonoBehaviour
             return Physics.OverlapBox(center, halfExtents, Quaternion.identity, layerMask);
         }
         return null;
+    }
+
+    void BlockUIClickThrough()
+    {
+        if (clickAction.WasPressedThisFrame())
+        {
+            bool isOverUI = false;
+            var eventDataCurrentPosition = new PointerEventData(EventSystem.current)
+            {
+                position = pointAction.ReadValue<Vector2>()
+            };
+            var results = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(eventDataCurrentPosition, results);
+            for (int i = 0; i < results.Count; i++)
+            {
+                if (results[i].gameObject.layer != 5) //5 = UI layer
+                    continue;
+                isOverUI = true;
+                break;
+            }
+            if (!isOverUI) return;
+
+            foreach (InputAction action in uiBlockableActions)
+            {
+                if (action.actionMap.enabled && action.WasPressedThisFrame())
+                {
+                    action.Reset();
+                    action.Disable();
+                }
+            }
+        }
+        else if (clickAction.WasReleasedThisFrame())
+        {
+            foreach (InputAction action in uiBlockableActions)
+                if (action.actionMap.enabled)
+                    action.Enable();
+        }
     }
 }
