@@ -694,11 +694,10 @@ public class GameManager : MonoBehaviour
         if (_isFocused) Unfocus();
         _isFocused = true;
         FocusedStructure = structure;
-        Transform focusTransform;
-        Vector3 focusOffset = Vector3.zero;
+        Vector3 focusPosition;
         if (FocusedStructure.GetComponentInChildren<StructureUI>())
         {
-            focusTransform = FocusedStructure.GetComponentInChildren<StructureUI>().focusPoint;
+            focusPosition = FocusedStructure.GetComponentInChildren<StructureUI>().focusPoint.position;
         }
         else
         {
@@ -706,8 +705,7 @@ public class GameManager : MonoBehaviour
             Vector3 relativeUp = new Vector3(orientation.x, 0, orientation.y);
             Vector3 relativeRight = new Vector3(orientation.y, 0, -orientation.x);
             int size = structure.GetComponent<StructureEntity>().size;
-            focusTransform = structure.transform;
-            focusOffset = size / 2f * (relativeRight + relativeUp);
+            focusPosition = structure.transform.position + size / 2f * (relativeRight + relativeUp);
         }
 
         if (enableStructureUI)
@@ -716,19 +714,19 @@ public class GameManager : MonoBehaviour
         }
         if (enablePortUI)
         {
-            HighlightDisconnectedPorts(focusTransform.position + focusOffset, excludePorts: excludePorts);
-            HighlightWires(Vector3ToTile(focusTransform.position + focusOffset));
+            HighlightDisconnectedPorts(focusPosition, excludePorts: excludePorts);
+            HighlightWires(Vector3ToTile(focusPosition));
         }
         if (enableBuildingUI)
         {
             Vector3 cameraDirection = Camera.main.transform.forward;
+            Vector3 position = focusPosition - cameraDirection * 0.5f + new Vector3(-0.75f, 0, -0.75f);
+            Quaternion rotation = Quaternion.LookRotation(-cameraDirection, Vector3.up);
             buildingUI.SetActive(true);
-            UIElementFollow uIElementFollow = buildingUI.GetComponent<UIElementFollow>();
-            uIElementFollow.target = focusTransform;
-            uIElementFollow.offset = focusOffset - cameraDirection * 0.5f + new Vector3(-1.5f, 0, -1.5f);
+            buildingUI.GetComponent<UIElementFollow>().target = FocusedStructure;
 
             // show rail extenders if the structure is connectable
-            Vector2Int tile = Vector3ToTile(focusTransform.position + focusOffset);
+            Vector2Int tile = Vector3ToTile(focusPosition);
             if (_rails.ContainsKey(tile))
             {
                 if (_rails[tile] is DynamicRail dynamicRail)
@@ -969,11 +967,6 @@ public class GameManager : MonoBehaviour
     public void RemoveFocusedStructure()
     {
         RemoveStructure(FocusedStructure);
-    }
-
-    public void RotateFocusedStructure()
-    {
-        RotateStructureClockwise(FocusedStructure);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
