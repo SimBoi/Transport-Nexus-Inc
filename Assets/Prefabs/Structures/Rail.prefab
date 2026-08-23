@@ -444,7 +444,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: baa62c8f1a163f7499185b4c44237fa9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ui: {fileID: 6014967612627250635}
+  canvas: {fileID: 6014967612627250635}
+  screenFocusPoint: {fileID: 5418678959782787713}
   focusPoint: {fileID: 734989432430722767}
 --- !u!1 &5505179592693250341
 GameObject:

@@ -30,14 +30,15 @@ public class GameManager : MonoBehaviour
 
     private HashSet<Train> _trains = new();
 
+    [SerializeField] private Canvas canvas;
     private bool _isFocused = false;
-    public GameObject FocusedStructure { get; private set; }
+    public StructureEntity FocusedStructure { get; private set; }
     public GameObject FocusedTrain { get; private set; }
     [SerializeField] private GameObject portUIPrefab;
     [SerializeField] private GameObject wireUIPrefab;
     private List<GameObject> _highlightedPorts = new();
     private List<GameObject> _highlightedWires = new();
-    [SerializeField] private GameObject buildingUI;
+    [SerializeField] private BuildingUI buildingUI;
     [SerializeField] private GameObject trainPrefab;
     [SerializeField] private GameObject ConnectableExtenderPrefab;
     private List<GameObject> _railExtenders = new();
@@ -334,6 +335,11 @@ public class GameManager : MonoBehaviour
         return true;
     }
 
+    public void RotateStructureClockwise(StructureEntity structure)
+    {
+        RotateStructureClockwise(structure.tile);
+    }
+
     public void RotateStructureClockwise(GameObject structure)
     {
         RotateStructureClockwise(structure.GetComponent<StructureEntity>().tile);
@@ -348,6 +354,11 @@ public class GameManager : MonoBehaviour
 
         if (!RemoveStructure(tile)) return;
         AddStructure(newTile, newOrientation, structure.prefab);
+    }
+
+    public bool RemoveStructure(StructureEntity structure)
+    {
+        return RemoveStructure(structure.tile);
     }
 
     public bool RemoveStructure(GameObject structure)
@@ -443,7 +454,7 @@ public class GameManager : MonoBehaviour
 
         for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) _tiles.Remove(tile + x * relativeRight + y * relativeUp);
 
-        if (_isFocused && FocusedStructure == structure.gameObject) Unfocus();
+        if (_isFocused && FocusedStructure == structure) Unfocus();
 
         structure.GetComponent<BuildableEntity>().Destroy();
         return true;
@@ -693,7 +704,7 @@ public class GameManager : MonoBehaviour
     {
         if (_isFocused) Unfocus();
         _isFocused = true;
-        FocusedStructure = structure;
+        FocusedStructure = structure.GetComponent<StructureEntity>();
         Transform focusTransform;
         Vector3 focusOffset = Vector3.zero;
         if (FocusedStructure.GetComponentInChildren<StructureUI>())
@@ -721,11 +732,10 @@ public class GameManager : MonoBehaviour
         }
         if (enableBuildingUI)
         {
-            Vector3 cameraDirection = Camera.main.transform.forward;
-            buildingUI.SetActive(true);
-            UIElementFollow uIElementFollow = buildingUI.GetComponent<UIElementFollow>();
-            uIElementFollow.target = focusTransform;
-            uIElementFollow.offset = focusOffset - cameraDirection * 0.5f + new Vector3(-1.5f, 0, -1.5f);
+            buildingUI.gameObject.SetActive(true);
+            buildingUI.structure = FocusedStructure;
+            buildingUI.structureUI = FocusedStructure.GetComponent<StructureUI>();
+            buildingUI.offset = new Vector3(-1, 0, -1) * FocusedStructure.size / 2f;
 
             // show rail extenders if the structure is connectable
             Vector2Int tile = Vector3ToTile(focusTransform.position + focusOffset);
@@ -798,47 +808,39 @@ public class GameManager : MonoBehaviour
                 if (structure is Sensor sensor)
                 {
                     if (excludePorts != null && excludePorts.Contains(sensor.outputPort)) continue;
-                    HighlightDisconnectedPort(sensor.outputPort);
+                    HighlightPort(sensor.outputPort);
                 }
                 else if (structure is Processor processor)
                 {
                     foreach (Port port in processor.inputPorts)
                     {
                         if (excludePorts != null && excludePorts.Contains(port)) continue;
-                        HighlightDisconnectedPort(port);
+                        HighlightPort(port);
                     }
                     if (excludePorts != null && excludePorts.Contains(processor.outputPort)) continue;
-                    HighlightDisconnectedPort(processor.outputPort);
+                    HighlightPort(processor.outputPort);
                 }
                 else if (structure is Actuator actuator)
                 {
                     foreach (Port port in actuator.inputPorts)
                     {
                         if (excludePorts != null && excludePorts.Contains(port)) continue;
-                        HighlightDisconnectedPort(port);
+                        HighlightPort(port);
                     }
                 }
                 else if (structure is SplitterPort splitterPort)
                 {
                     if (excludePorts != null && excludePorts.Contains(splitterPort.port)) continue;
-                    HighlightPort(splitterPort.port);
+                    HighlightPort(splitterPort.port, false);
                 }
             }
         }
     }
 
-    public void HighlightDisconnectedPort(Port port)
+    public void HighlightPort(Port port, bool excludeConnectedPorts = true)
     {
-        if (port.isConnected) return;
-        HighlightPort(port);
-    }
-
-    public void HighlightPort(Port port)
-    {
-        Vector3 cameraDirection = Camera.main.transform.forward;
-        Vector3 position = port.transform.position - cameraDirection * 0.5f;
-        Quaternion rotation = Quaternion.LookRotation(-cameraDirection, Vector3.up);
-        GameObject portUI = Instantiate(portUIPrefab, position, rotation);
+        if (excludeConnectedPorts && port.isConnected) return;
+        GameObject portUI = Instantiate(portUIPrefab, canvas.transform); // TODO improvement: pool the game objects
         portUI.GetComponent<PortUI>().port = port;
         _highlightedPorts.Add(portUI);
     }
@@ -883,12 +885,7 @@ public class GameManager : MonoBehaviour
     public void HighlightWire(GameObject wire)
     {
         if (wire == null) return;
-        Rope rope = wire.GetComponent<Rope>();
-        Vector3 cameraDirection = Camera.main.transform.forward;
-        Vector3 cameraUp = Camera.main.transform.up;
-        Vector3 position = (rope.StartPoint.position + rope.EndPoint.position) / 2 - cameraUp * 0.3f - cameraDirection * 0.5f;
-        Quaternion rotation = Quaternion.LookRotation(-cameraDirection, Vector3.up);
-        GameObject wireUI = Instantiate(wireUIPrefab, position, rotation);
+        GameObject wireUI = Instantiate(wireUIPrefab, canvas.transform);
         wireUI.GetComponent<WireUI>().wire = wire;
         _highlightedWires.Add(wireUI);
     }
@@ -948,9 +945,9 @@ public class GameManager : MonoBehaviour
             UnhighlightDisconnectedPorts(excludePorts);
             UnhighlightWires();
         }
-        if (disableBuildingUI && buildingUI.activeSelf)
+        if (disableBuildingUI && buildingUI.gameObject.activeSelf)
         {
-            buildingUI.SetActive(false);
+            buildingUI.gameObject.SetActive(false);
             foreach (GameObject railExtender in _railExtenders) Destroy(railExtender);
             _railExtenders.Clear();
         }
@@ -966,15 +963,6 @@ public class GameManager : MonoBehaviour
         Unfocus();
     }
 
-    public void RemoveFocusedStructure()
-    {
-        RemoveStructure(FocusedStructure);
-    }
-
-    public void RotateFocusedStructure()
-    {
-        RotateStructureClockwise(FocusedStructure);
-    }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////// Trains /////////////////////////////////////////////

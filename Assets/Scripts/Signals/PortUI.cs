@@ -2,21 +2,28 @@ using System.Collections.Generic;
 using Signals;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
+[RequireComponent(typeof(Image))]
 public class PortUI : MonoBehaviour
 {
     public Port port;
     public GameObject wirePrefab;
     private AutoWireResizer _draggedWireResizer = null;
 
-    public void StartDrag(BaseEventData eventData)
+    void Update()
+    {
+        transform.position = Camera.main.WorldToScreenPoint(port.transform.position);
+    }
+
+    public void StartDrag(BaseEventData _)
     {
         GameManager.Instance.Unfocus(excludePorts: new List<Port> { port });
         GameManager.Instance.HighlightDisconnectedPorts(port.transform.position, 5, new List<Port> { port });
         _draggedWireResizer = Instantiate(wirePrefab, port.transform.position, Quaternion.identity).GetComponent<AutoWireResizer>();
         _draggedWireResizer.SetStart(port.transform.position);
         _draggedWireResizer.transform.parent = transform;
-        GetComponent<SpriteRenderer>().enabled = false;
+        GetComponent<Image>().enabled = false;
     }
 
     public void Drag(BaseEventData eventData)
@@ -33,24 +40,30 @@ public class PortUI : MonoBehaviour
         if (GameManager.Instance.IsFocused()) return;
 
         // raycast to find the end port
-        Ray ray = Camera.main.ScreenPointToRay(((PointerEventData)eventData).position);
-        if (Physics.Raycast(ray, out RaycastHit result))
+        var raycastResults = new List<RaycastResult>();
+        EventSystem.current.RaycastAll((PointerEventData)eventData, raycastResults);
+        foreach (var raycastResult in raycastResults)
         {
-            PortUI endPortUI = result.collider.GetComponent<PortUI>();
-            if (endPortUI != null && endPortUI.port != port)
-            {
-                _draggedWireResizer.SetEnd(endPortUI.port.transform.position);
-                _draggedWireResizer.transform.parent = null;
-                GameManager.Instance.ConnectWire(port, endPortUI.port, _draggedWireResizer.gameObject);
-            }
-            else
-            {
-                Destroy(_draggedWireResizer.gameObject);
-            }
-        }
-        GameManager.Instance.UnhighlightDisconnectedPorts();
+            if (raycastResult.gameObject.layer != 5)
+                continue;
 
-        // refocus the structure containing the port
+            PortUI endPortUI = raycastResult.gameObject.GetComponent<PortUI>();
+            if (endPortUI == null || endPortUI.port == port)
+                continue;
+
+            _draggedWireResizer.SetEnd(endPortUI.port.transform.position);
+            _draggedWireResizer.transform.parent = null;
+            GameManager.Instance.ConnectWire(port, endPortUI.port, _draggedWireResizer.gameObject);
+            _draggedWireResizer = null;
+            break;
+        }
+        if (_draggedWireResizer != null)
+        {
+            Destroy(_draggedWireResizer.gameObject);
+            _draggedWireResizer = null;
+        }
+
+        GameManager.Instance.UnhighlightDisconnectedPorts();
         GameObject portStructure = port.GetComponentInParent<StructureUI>().gameObject;
         GameManager.Instance.FocusStructure(portStructure);
     }

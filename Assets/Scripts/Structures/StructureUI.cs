@@ -2,18 +2,23 @@ using UnityEngine;
 
 public class StructureUI : MonoBehaviour
 {
-    [SerializeField] private GameObject ui;
+    [SerializeField] private GameObject canvas;
+    [SerializeField] private Transform screenFocusPoint;
     public Transform focusPoint;
+
+    void Update()
+    {
+        screenFocusPoint.position = Camera.main.WorldToScreenPoint(focusPoint.position);
+    }
 
     public void Focus()
     {
-        ui.SetActive(true);
-        ui.transform.rotation = Quaternion.LookRotation(Camera.main.transform.forward, Vector3.up);
+        canvas.SetActive(true);
     }
 
     public void Unfocus()
     {
-        ui.SetActive(false);
+        canvas.SetActive(false);
     }
 
     public void OnPointerClick()

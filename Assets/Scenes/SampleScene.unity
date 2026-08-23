@@ -1632,7 +1632,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 25, y: 0}
+  m_AnchoredPosition: {x: 25, y: -25}
   m_SizeDelta: {x: 50, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &587810833
@@ -1679,8 +1679,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1709670103}
-        m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
+      - m_Target: {fileID: 743081256}
+        m_TargetAssemblyTypeName: BuildingUI, Assembly-CSharp
         m_MethodName: RotateFocusedStructure
         m_Mode: 1
         m_Arguments:
@@ -1962,10 +1962,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 743081255}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 18074e59f27d8e340bf5979334bf2cc9, type: 3}
+  m_Script: {fileID: 11500000, guid: c7518ed500852f4369e4dd9f7e81a5f6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UIElementFollow
-  target: {fileID: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingUI
+  structure: {fileID: 0}
+  structureUI: {fileID: 0}
   offset: {x: 0, y: 0, z: 0}
 --- !u!1001 &769552045
 PrefabInstance:
@@ -2566,7 +2567,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: -25, y: 0}
+  m_AnchoredPosition: {x: -25, y: -25}
   m_SizeDelta: {x: 50, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1216673235
@@ -2613,8 +2614,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1709670103}
-        m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
+      - m_Target: {fileID: 743081256}
+        m_TargetAssemblyTypeName: BuildingUI, Assembly-CSharp
         m_MethodName: RemoveFocusedStructure
         m_Mode: 1
         m_Arguments:
@@ -3733,9 +3734,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   tick: 0
   resources: 000000000000000010270000
-  portUIPrefab: {fileID: 781856674227519226, guid: f682d593ab29fa145a4ba5110ef58ff5, type: 3}
-  wireUIPrefab: {fileID: 3475374192696399441, guid: 34e26b43af503b7aca6c3a8f9efbdd48, type: 3}
-  buildingUI: {fileID: 743081255}
+  canvas: {fileID: 1450039601}
+  portUIPrefab: {fileID: 7693735773725488188, guid: f682d593ab29fa145a4ba5110ef58ff5, type: 3}
+  wireUIPrefab: {fileID: 6781728324781636243, guid: f5d0f28025c8b4130a6efbee4811993a, type: 3}
+  buildingUI: {fileID: 743081256}
   trainPrefab: {fileID: 8198978166720814185, guid: 852f6733ace79c6499b5bb3d08269ceb, type: 3}
   ConnectableExtenderPrefab: {fileID: 8482752785500036664, guid: e1671c0f00fdf7646afcd7b845944bfa, type: 3}
   wirePrefab: {fileID: 6396284025751597323, guid: 6b079dd2640acb2438cf12267adcf1cc, type: 3}
