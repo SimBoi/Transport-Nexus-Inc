@@ -933,8 +933,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MouseLook
   viewDistanceRange: {x: 10, y: 80}
   zoomSensitivity: 2
-  zoomableUI:
-  - {fileID: 48671337}
   smoothnessLambda: 12
   minDragDistance: 0
   voidToolSelectionColor: {r: 1, g: 0, b: 0, a: 0.7019608}
