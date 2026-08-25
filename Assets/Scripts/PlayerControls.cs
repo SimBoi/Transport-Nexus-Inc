@@ -14,6 +14,7 @@ public class PlayerControls : MonoBehaviour
     [SerializeField] Vector2 viewDistanceRange;
     [SerializeField] float zoomSensitivity;
     float viewDistance = 0;
+    float smoothedDistance = 0;
     Plane worldPlane;
     Plane viewPlane;
     [SerializeField] float smoothnessLambda;
@@ -97,6 +98,13 @@ public class PlayerControls : MonoBehaviour
                 viewTarget,
                 1 - Mathf.Exp(-smoothnessLambda * Time.deltaTime)
             );
+            smoothedDistance = Mathf.Lerp(smoothedDistance, viewDistance, 1 - Mathf.Exp(-smoothnessLambda * Time.deltaTime));
+            Vector3 smoothedScale = new(1 / smoothedDistance, 1 / smoothedDistance, 1);
+            GameManager.Instance.BuildingUI.transform.localScale = smoothedScale;
+            foreach (var uiTransform in GameManager.Instance.HighlightedPorts)
+                uiTransform.transform.localScale = smoothedScale;
+            foreach (var uiTransform in GameManager.Instance.HighlightedWires)
+                uiTransform.transform.localScale = smoothedScale;
         }
         else if (deconstructToolMap.enabled)
         {

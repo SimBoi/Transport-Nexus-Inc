@@ -5,8 +5,6 @@ using UnityEngine;
 using System;
 using Inventories;
 using UnityEditor;
-using GogoGaga.OptimizedRopesAndCables;
-using Unity.VisualScripting;
 
 // TODO: low priority: refactor into sub-managers to reduce complexity of the GameManager
 // TODO: low priority: add event based subsciptions and interactions to potentially reduce complexity
@@ -36,9 +34,12 @@ public class GameManager : MonoBehaviour
     public GameObject FocusedTrain { get; private set; }
     [SerializeField] private GameObject portUIPrefab;
     [SerializeField] private GameObject wireUIPrefab;
-    private List<GameObject> _highlightedPorts = new();
-    private List<GameObject> _highlightedWires = new();
-    [SerializeField] private BuildingUI buildingUI;
+    List<GameObject> highlightedPorts = new();
+    List<GameObject> highlightedWires = new();
+    public IReadOnlyList<GameObject> HighlightedPorts => highlightedPorts;
+    public IReadOnlyList<GameObject> HighlightedWires => highlightedWires;
+    [SerializeField] BuildingUI buildingUI;
+    public BuildingUI BuildingUI => buildingUI;
     [SerializeField] private GameObject trainPrefab;
     [SerializeField] private GameObject ConnectableExtenderPrefab;
     private List<GameObject> _railExtenders = new();
@@ -732,10 +733,10 @@ public class GameManager : MonoBehaviour
         }
         if (enableBuildingUI)
         {
-            buildingUI.gameObject.SetActive(true);
-            buildingUI.structure = FocusedStructure;
-            buildingUI.structureUI = FocusedStructure.GetComponent<StructureUI>();
-            buildingUI.offset = new Vector3(-1, 0, -1) * FocusedStructure.size / 2f;
+            BuildingUI.gameObject.SetActive(true);
+            BuildingUI.structure = FocusedStructure;
+            BuildingUI.structureUI = FocusedStructure.GetComponent<StructureUI>();
+            BuildingUI.offset = new Vector3(-1, 0, -1) * FocusedStructure.size / 2f;
 
             // show rail extenders if the structure is connectable
             Vector2Int tile = Vector3ToTile(focusTransform.position + focusOffset);
@@ -842,7 +843,7 @@ public class GameManager : MonoBehaviour
         if (excludeConnectedPorts && port.isConnected) return;
         GameObject portUI = Instantiate(portUIPrefab, canvas.transform); // TODO improvement: pool the game objects
         portUI.GetComponent<PortUI>().port = port;
-        _highlightedPorts.Add(portUI);
+        highlightedPorts.Add(portUI);
     }
 
     public void HighlightWires(Vector2Int tile)
@@ -887,27 +888,27 @@ public class GameManager : MonoBehaviour
         if (wire == null) return;
         GameObject wireUI = Instantiate(wireUIPrefab, canvas.transform);
         wireUI.GetComponent<WireUI>().wire = wire;
-        _highlightedWires.Add(wireUI);
+        highlightedWires.Add(wireUI);
     }
 
     public void UnhighlightDisconnectedPorts(List<Port> excludePorts = null)
     {
         List<GameObject> portsToKeep = new();
-        foreach (GameObject portUI in _highlightedPorts)
+        foreach (GameObject portUI in highlightedPorts)
         {
             if (excludePorts != null && excludePorts.Contains(portUI.GetComponent<PortUI>().port)) portsToKeep.Add(portUI);
             else Destroy(portUI);
         }
-        _highlightedPorts = portsToKeep;
+        highlightedPorts = portsToKeep;
     }
 
     public void UnhighlightWires()
     {
-        foreach (GameObject wireUI in _highlightedWires)
+        foreach (GameObject wireUI in highlightedWires)
         {
             Destroy(wireUI);
         }
-        _highlightedWires.Clear();
+        highlightedWires.Clear();
     }
 
     public void ShowConnectableExtender(Vector2Int tile, Vector2Int orientation, GameObject connectablePrefab, bool isReversed = false)
@@ -945,9 +946,9 @@ public class GameManager : MonoBehaviour
             UnhighlightDisconnectedPorts(excludePorts);
             UnhighlightWires();
         }
-        if (disableBuildingUI && buildingUI.gameObject.activeSelf)
+        if (disableBuildingUI && BuildingUI.gameObject.activeSelf)
         {
-            buildingUI.gameObject.SetActive(false);
+            BuildingUI.gameObject.SetActive(false);
             foreach (GameObject railExtender in _railExtenders) Destroy(railExtender);
             _railExtenders.Clear();
         }
