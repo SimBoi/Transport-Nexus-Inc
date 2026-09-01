@@ -19,6 +19,7 @@ Transport Nexus Inc is a simple tech game focusing on the transportation aspect 
 ## WIP
 
 - Migrate to new input system & use Canvas for building UI
+- drag to extend structures instead of repeated clicks
 
 ## Roadmap
 
@@ -38,8 +39,8 @@ Transport Nexus Inc is a simple tech game focusing on the transportation aspect 
 - PCBs (create parts that contain complex signal logic)
 - Train not removing itself from all rail tiles properly
 - Attempting to place a train on an isolated station, it gets added to its list of trains but the train is not spawned
-- drag to extend structures instead of repeated clicks
 - dont drop items from structures when rotating them
+- structure no longer refocuses when rotated
 - Optimize tile rendering in chunks
 - improve building structures with orientation
 - render focus structure in a separate camera on top of everything

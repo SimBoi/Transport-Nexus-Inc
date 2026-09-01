@@ -42,7 +42,7 @@ public class GameManager : MonoBehaviour
     public BuildingUI BuildingUI => buildingUI;
     [SerializeField] private GameObject trainPrefab;
     [SerializeField] private GameObject ConnectableExtenderPrefab;
-    private List<GameObject> _railExtenders = new();
+    private List<GameObject> _connectableExtenders = new();
 
     [SerializeField] private GameObject wirePrefab;
     [SerializeField] private Transform powerLevels;
@@ -112,7 +112,7 @@ public class GameManager : MonoBehaviour
         // restore tick
         tick = saveData.tick;
 
-        // restore resources 
+        // restore resources
         resources = saveData.resources;
 
         // restore tiles
@@ -204,20 +204,20 @@ public class GameManager : MonoBehaviour
         return _tiles[tile].orientation;
     }
 
-    public bool AddStructure(Vector2Int tile, Vector2Int orientation, GameObject structurePrefab)
+    public bool AddStructure(Vector2Int tile, Vector2Int orientation, GameObject structurePrefab, bool switchFocus = true)
     {
         int size = structurePrefab.GetComponent<StructureEntity>().size;
         Vector2Int relativeUp = orientation;
         Vector2Int relativeRight = new Vector2Int(relativeUp.y, -relativeUp.x);
-        List<Vector2Int> tiles = new(size*size);
+        List<Vector2Int> tiles = new(size * size);
         for (int x = 0; x < size; x++)
-        for (int y = 0; y < size; y++)
-        {
-            Vector2Int subTile = tile + x * relativeRight + y * relativeUp;
-            if (_tiles.ContainsKey(subTile)) return false;
-            if (!ChunksManager.instance.CanBuild(subTile)) return false;
-            tiles.Add(subTile);
-        }
+            for (int y = 0; y < size; y++)
+            {
+                Vector2Int subTile = tile + x * relativeRight + y * relativeUp;
+                if (_tiles.ContainsKey(subTile)) return false;
+                if (!ChunksManager.instance.CanBuild(subTile)) return false;
+                tiles.Add(subTile);
+            }
         ChunksManager.instance.ClearVegetation(tiles);
 
         Vector3 position = new Vector3(tile.x, 0, tile.y);
@@ -231,10 +231,10 @@ public class GameManager : MonoBehaviour
         if (instantiatedStructure is Machine machine)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
-                {
-                    _machines.Add(tile + x * relativeRight + y * relativeUp, machine);
-                    _actuators.Add(tile + x * relativeRight + y * relativeUp, machine);
-                }
+            {
+                _machines.Add(tile + x * relativeRight + y * relativeUp, machine);
+                _actuators.Add(tile + x * relativeRight + y * relativeUp, machine);
+            }
             machine.InitializeActuator(signalNetworkGraph);
             if (machine is ResourceExtractor resourceExtractor)
             {
@@ -249,20 +249,20 @@ public class GameManager : MonoBehaviour
         else if (instantiatedStructure is SensorRail sensorRail)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
-                {
-                    _rails.Add(tile + x * relativeRight + y * relativeUp, sensorRail);
-                    _sensors.Add(tile + x * relativeRight + y * relativeUp, sensorRail);
-                }
+            {
+                _rails.Add(tile + x * relativeRight + y * relativeUp, sensorRail);
+                _sensors.Add(tile + x * relativeRight + y * relativeUp, sensorRail);
+            }
             sensorRail.InitializeSensor(signalNetworkGraph);
             ConnectRail(tile);
         }
         else if (instantiatedStructure is ActuatorRail actuatorRail)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
-                {
-                    _rails.Add(tile + x * relativeRight + y * relativeUp, actuatorRail);
-                    _actuators.Add(tile + x * relativeRight + y * relativeUp, actuatorRail);
-                }
+            {
+                _rails.Add(tile + x * relativeRight + y * relativeUp, actuatorRail);
+                _actuators.Add(tile + x * relativeRight + y * relativeUp, actuatorRail);
+            }
             actuatorRail.InitializeActuator(signalNetworkGraph);
             ConnectRail(tile);
         }
@@ -274,20 +274,20 @@ public class GameManager : MonoBehaviour
         else if (instantiatedStructure is SensorConveyorBelt sensorConveyor)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
-                {
-                    _conveyors.Add(tile + x * relativeRight + y * relativeUp, sensorConveyor);
-                    _sensors.Add(tile + x * relativeRight + y * relativeUp, sensorConveyor);
-                }
+            {
+                _conveyors.Add(tile + x * relativeRight + y * relativeUp, sensorConveyor);
+                _sensors.Add(tile + x * relativeRight + y * relativeUp, sensorConveyor);
+            }
             sensorConveyor.InitializeSensor(signalNetworkGraph);
             ConnectConveyor(tile);
         }
         else if (instantiatedStructure is ActuatorConveyorBelt actuatorConveyor)
         {
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
-                {
-                    _conveyors.Add(tile + x * relativeRight + y * relativeUp, actuatorConveyor);
-                    _actuators.Add(tile + x * relativeRight + y * relativeUp, actuatorConveyor);
-                }
+            {
+                _conveyors.Add(tile + x * relativeRight + y * relativeUp, actuatorConveyor);
+                _actuators.Add(tile + x * relativeRight + y * relativeUp, actuatorConveyor);
+            }
             actuatorConveyor.InitializeActuator(signalNetworkGraph);
             ConnectConveyor(tile);
         }
@@ -332,7 +332,8 @@ public class GameManager : MonoBehaviour
             splitterPort.InitializeSplitterPort(signalNetworkGraph);
         }
 
-        FocusStructure(instantiatedStructure.gameObject);
+        if (switchFocus)
+            FocusStructure(instantiatedStructure.gameObject);
         return true;
     }
 
@@ -381,10 +382,10 @@ public class GameManager : MonoBehaviour
             machine.DropInventory();
             foreach (Port inputPort in _actuators[tile].inputPorts) inputPort.RemoveFromNetwork();
             for (int x = 0; x < size; x++) for (int y = 0; y < size; y++)
-                {
-                    _machines.Remove(tile + x * relativeRight + y * relativeUp);
-                    _actuators.Remove(tile + x * relativeRight + y * relativeUp);
-                }
+            {
+                _machines.Remove(tile + x * relativeRight + y * relativeUp);
+                _actuators.Remove(tile + x * relativeRight + y * relativeUp);
+            }
         }
         else if (_rails.ContainsKey(tile))
         {
@@ -634,7 +635,7 @@ public class GameManager : MonoBehaviour
         }
 
         // reorient neighbors
-            foreach (Vector2Int dir in compatibleConnections) if (_conveyors[tile + dir] is DynamicConveyorBelt neighborConveyor) neighborConveyor.Connect(-dir);
+        foreach (Vector2Int dir in compatibleConnections) if (_conveyors[tile + dir] is DynamicConveyorBelt neighborConveyor) neighborConveyor.Connect(-dir);
     }
 
     // disconnects the conveyor from all neighbors
@@ -701,7 +702,12 @@ public class GameManager : MonoBehaviour
         return _isFocused;
     }
 
-    public void FocusStructure(GameObject structure, bool enableStructureUI = true, bool enablePortUI = true, List<Port> excludePorts = null, bool enableBuildingUI = true)
+    public void FocusStructure(Vector2Int tile, bool structureUI = true, bool portUI = true, List<Port> excludePorts = null, bool buildingUI = true)
+    {
+        FocusStructure(GetTileStructure(tile).gameObject, structureUI, portUI, excludePorts, buildingUI);
+    }
+
+    public void FocusStructure(GameObject structure, bool structureUI = true, bool portUI = true, List<Port> excludePorts = null, bool buildingUI = true)
     {
         if (_isFocused) Unfocus();
         _isFocused = true;
@@ -738,7 +744,7 @@ public class GameManager : MonoBehaviour
             BuildingUI.structureUI = FocusedStructure.GetComponent<StructureUI>();
             BuildingUI.offset = new Vector3(-1, 0, -1) * FocusedStructure.size / 2f;
 
-            // show rail extenders if the structure is connectable
+            // show connectable extenders if the structure is connectable
             Vector2Int tile = Vector3ToTile(focusTransform.position + focusOffset);
             if (_rails.ContainsKey(tile))
             {
@@ -852,7 +858,7 @@ public class GameManager : MonoBehaviour
         (Vector2Int _, StructureEntity structure) = _tiles[tile];
         if (structure is Sensor sensor)
         {
-           wires.Add(sensor.outputPort.network.GetWires(sensor.outputPort));
+            wires.Add(sensor.outputPort.network.GetWires(sensor.outputPort));
         }
         else if (structure is Processor processor)
         {
@@ -920,7 +926,7 @@ public class GameManager : MonoBehaviour
         extender.connectablePrefab = connectablePrefab;
         extender.tile = tile;
         extender.orientation = isReversed ? -orientation : orientation;
-        _railExtenders.Add(extender.gameObject);
+        _connectableExtenders.Add(extender.gameObject);
     }
 
     public void FocusTrain(GameObject train)
@@ -931,12 +937,12 @@ public class GameManager : MonoBehaviour
         FocusedTrain.GetComponent<TrainUI>().Focus();
     }
 
-    public void Unfocus(bool structureUI = true, bool disablePortUI = true, List<Port> excludePorts = null, bool disableBuildingUI = true, bool disableTrainUI = true)
+    public void Unfocus(bool disableStructureUI = true, bool disablePortUI = true, List<Port> excludePorts = null, bool disableBuildingUI = true, bool disableTrainUI = true, List<ConnectableExtender> excludeExtenders = null)
     {
         if (!_isFocused) return;
         _isFocused = false;
 
-        if (structureUI && FocusedStructure != null)
+        if (disableStructureUI && FocusedStructure != null)
         {
             FocusedStructure.GetComponent<StructureUI>().Unfocus();
             FocusedStructure = null;
@@ -949,8 +955,21 @@ public class GameManager : MonoBehaviour
         if (disableBuildingUI && BuildingUI.gameObject.activeSelf)
         {
             BuildingUI.gameObject.SetActive(false);
-            foreach (GameObject railExtender in _railExtenders) Destroy(railExtender);
-            _railExtenders.Clear();
+            if (excludeExtenders == null || excludeExtenders.Count == 0)
+            {
+                foreach (GameObject connectableExtender in _connectableExtenders)
+                    Destroy(connectableExtender);
+                _connectableExtenders.Clear();
+            }
+            else
+            {
+                foreach (GameObject connectableExtender in _connectableExtenders)
+                    if (!excludeExtenders.Contains(connectableExtender.GetComponent<ConnectableExtender>()))
+                        Destroy(connectableExtender);
+                _connectableExtenders.Clear();
+                foreach (ConnectableExtender excludedExtender in excludeExtenders)
+                    _connectableExtenders.Add(excludedExtender.gameObject);
+            }
         }
         if (disableTrainUI && FocusedTrain != null)
         {
