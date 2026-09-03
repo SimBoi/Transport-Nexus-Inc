@@ -18,12 +18,10 @@ Transport Nexus Inc is a simple tech game focusing on the transportation aspect 
 
 ## WIP
 
-- Migrate to new input system & use Canvas for building UI
-- drag to extend structures instead of repeated clicks
+- Menus
 
 ## Roadmap
 
-- Menus
 - Sounds
 - Models & Animations
 - Game loop planning

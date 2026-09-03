@@ -926,6 +926,7 @@ public class GameManager : MonoBehaviour
         extender.connectablePrefab = connectablePrefab;
         extender.tile = tile;
         extender.orientation = isReversed ? -orientation : orientation;
+        extender.isReversed = isReversed;
         _connectableExtenders.Add(extender.gameObject);
     }
 
