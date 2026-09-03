@@ -702,12 +702,12 @@ public class GameManager : MonoBehaviour
         return _isFocused;
     }
 
-    public void FocusStructure(Vector2Int tile, bool structureUI = true, bool portUI = true, List<Port> excludePorts = null, bool buildingUI = true)
+    public void FocusStructure(Vector2Int tile, bool enableStructureUI = true, bool enablePortUI = true, List<Port> excludePorts = null, bool enableBuildingUI = true)
     {
-        FocusStructure(GetTileStructure(tile).gameObject, structureUI, portUI, excludePorts, buildingUI);
+        FocusStructure(GetTileStructure(tile).gameObject, enableStructureUI, enablePortUI, excludePorts, enableBuildingUI);
     }
 
-    public void FocusStructure(GameObject structure, bool structureUI = true, bool portUI = true, List<Port> excludePorts = null, bool buildingUI = true)
+    public void FocusStructure(GameObject structure, bool enableStructureUI = true, bool enablePortUI = true, List<Port> excludePorts = null, bool enableBuildingUI = true)
     {
         if (_isFocused) Unfocus();
         _isFocused = true;
