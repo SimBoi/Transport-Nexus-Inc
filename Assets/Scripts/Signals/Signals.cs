@@ -18,7 +18,11 @@ namespace Signals
             {
                 Port port1 = edge.Source;
                 Port port2 = edge.Target;
-                saveData.portConnections.Add((port1.ID, port2.ID));
+                saveData.portConnections.Add(new()
+                {
+                    port1Id = port1.ID,
+                    port2Id = port2.ID
+                });
             }
 
             foreach (Channel signalChannel in _signalChannels) saveData.channelIds.Add(signalChannel.ID);

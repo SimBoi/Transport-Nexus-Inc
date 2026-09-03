@@ -57,6 +57,11 @@ public class GameManager : MonoBehaviour
         else Destroy(gameObject);
     }
 
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
+
     void FixedUpdate()
     {
         Tick();
@@ -97,7 +102,12 @@ public class GameManager : MonoBehaviour
         {
             Vector2Int tile = entry.Key;
             (Vector2Int orientation, StructureEntity structure) = entry.Value;
-            saveData.tiles.Add((tile, orientation, structure.ID));
+            saveData.tiles.Add(new()
+            {
+                tile = tile,
+                orientation = orientation,
+                structureId = structure.ID
+            });
         }
 
         // save signal network graph
@@ -116,26 +126,26 @@ public class GameManager : MonoBehaviour
         resources = saveData.resources;
 
         // restore tiles
-        foreach ((Vector2Int tile, Vector2Int orientation, int structureId) in saveData.tiles)
+        foreach (var tileData in saveData.tiles)
         {
-            StructureEntity structure = idLookup[structureId] as StructureEntity;
-            _tiles.Add(tile, (orientation, structure));
-            if (structure is Sensor sensor) _sensors.Add(tile, sensor);
-            else if (structure is Processor processor) _processors.Add(tile, processor);
-            else if (structure is Actuator actuator) _actuators.Add(tile, actuator);
-            else if (structure is SplitterPort splitterPort) _splitterPorts.Add(tile, splitterPort);
-            if (structure is DynamicRail || structure is SensorRail || structure is ActuatorRail) _rails.Add(tile, structure);
-            else if (structure is DynamicConveyorBelt || structure is SensorConveyorBelt || structure is ActuatorConveyorBelt) _conveyors.Add(tile, structure);
-            else if (structure is Machine machine) _machines.Add(tile, machine);
+            StructureEntity structure = idLookup[tileData.structureId] as StructureEntity;
+            _tiles.Add(tileData.tile, (tileData.orientation, structure));
+            if (structure is Sensor sensor) _sensors.Add(tileData.tile, sensor);
+            else if (structure is Processor processor) _processors.Add(tileData.tile, processor);
+            else if (structure is Actuator actuator) _actuators.Add(tileData.tile, actuator);
+            else if (structure is SplitterPort splitterPort) _splitterPorts.Add(tileData.tile, splitterPort);
+            if (structure is DynamicRail || structure is SensorRail || structure is ActuatorRail) _rails.Add(tileData.tile, structure);
+            else if (structure is DynamicConveyorBelt || structure is SensorConveyorBelt || structure is ActuatorConveyorBelt) _conveyors.Add(tileData.tile, structure);
+            else if (structure is Machine machine) _machines.Add(tileData.tile, machine);
         }
 
         // restore signal network graph and wires
         signalNetworkGraph.RestoreVertices(saveData, idLookup);
         signalNetworkGraph.RestoreChannels(saveData, idLookup);
-        foreach ((int port1Id, int port2Id) in saveData.portConnections)
+        foreach (var connection in saveData.portConnections)
         {
-            Port port1 = idLookup[port1Id] as Port;
-            Port port2 = idLookup[port2Id] as Port;
+            Port port1 = idLookup[connection.port1Id] as Port;
+            Port port2 = idLookup[connection.port2Id] as Port;
             GameObject wire = Instantiate(wirePrefab, port1.transform.position, Quaternion.identity);
             wire.GetComponent<AutoWireResizer>().SetEnd(port2.transform.position);
             signalNetworkGraph.RestoreEdge(wire, port1, port2);
@@ -1003,7 +1013,7 @@ public class GameManager : MonoBehaviour
     public bool BuildTrain(Vector2Int tile)
     {
         if (!_rails.ContainsKey(tile)) return false;
-        if (!(_rails[tile] is TrainStop trainStop) || trainStop.trains.Count > 0) return false;
+        if (_rails[tile] is not TrainStop trainStop || trainStop.trains.Count > 0) return false;
 
         Train train = Instantiate(trainPrefab, new Vector3(tile.x, 0, tile.y), Quaternion.identity).GetComponent<Train>();
         train.Initialize(tile, _tiles[tile].orientation);

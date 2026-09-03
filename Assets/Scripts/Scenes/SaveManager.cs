@@ -3,6 +3,11 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 using Newtonsoft.Json;
+using Udar.SceneManager;
+using UnityEngine.SceneManagement;
+using System;
+using Structures;
+using Signals;
 
 // TODO: future improvement avoid having to implement custom logic whenever I have an ISavable as a property of another ISavable / a child of a prefab that wont be directly instantiated. potentially make 3 classes: ISavable (root monobehaviours in prefabs), ISavableChild (child monobehaviours in prefabs) and ISavableProperty (non monobehaviours), avoid repeating the CombinedState code by finding a way to reuse it
 // A simple interface for objects that can be saved and restored
@@ -22,26 +27,32 @@ public interface ISavableProperty
     void RestoreStateJson(string stateJson, Dictionary<int, ISavable> idLookup);
 }
 
-[System.Serializable]
+[Serializable]
+public class SaveMetadata
+{
+    public float playtime;
+}
+
+[Serializable]
 public class CombinedState
 {
     public string baseState;
     public string inheritedState;
 }
 
-[System.Serializable]
+[Serializable]
 public class SerializableTransform
 {
     public float[] position;
     public float[] rotation;
     public float[] scale;
 
-    public Vector3 GetPosition() => new Vector3(position[0], position[1], position[2]);
-    public Quaternion GetRotation() => new Quaternion(rotation[0], rotation[1], rotation[2], rotation[3]);
-    public Vector3 GetScale() => new Vector3(scale[0], scale[1], scale[2]);
+    public Vector3 GetPosition() => new(position[0], position[1], position[2]);
+    public Quaternion GetRotation() => new(rotation[0], rotation[1], rotation[2], rotation[3]);
+    public Vector3 GetScale() => new(scale[0], scale[1], scale[2]);
 }
 
-[System.Serializable]
+[Serializable]
 public class SavebleEntry
 {
     public int id;
@@ -51,17 +62,33 @@ public class SavebleEntry
     public string stateJson;
 }
 
-[System.Serializable]
+[Serializable]
+public class SerializableTile
+{
+    public Vector2Int tile;
+    public Vector2Int orientation;
+    public int structureId;
+}
+
+[Serializable]
+public class SerializablePortConnection
+{
+    public int port1Id;
+    public int port2Id;
+}
+
+[Serializable]
 public class SaveData
 {
+    public SaveMetadata metadata;
     // ISavable objects state
-    public List<SavebleEntry> savables = new List<SavebleEntry>();
+    public List<SavebleEntry> savables = new();
 
     // GameManger state
     public ulong tick;
     public int[] resources;
-    public List<(Vector2Int tile, Vector2Int orientation, int structureId)> tiles = new();
-    public List<(int port1Id, int port2Id)> portConnections = new();
+    public List<SerializableTile> tiles = new();
+    public List<SerializablePortConnection> portConnections = new();
     public List<int> channelIds = new();
     public List<int> trainIds = new();
 }
@@ -71,6 +98,11 @@ public class SaveManager : MonoBehaviour
     public static SaveManager Instance { get; private set; }
     private int nextId = 0;
     public int GenerateUniqueId() => nextId++;
+    [SerializeField] private SceneField menuScene;
+    [SerializeField] private SceneField gameScene;
+    public int LoadedSaveSlot { get; private set; } = -1;
+    private SaveMetadata loadedSaveMetadata = null;
+    private float sessionPlaytime = 0;
 
     public string SaveFileName = "save.json";
 
@@ -78,19 +110,34 @@ public class SaveManager : MonoBehaviour
     {
         if (Instance != null) Destroy(gameObject);
         Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
+    private void FixedUpdate()
+    {
+        sessionPlaytime += Time.fixedDeltaTime;
+    }
+
+    public SaveMetadata GetSaveMetadata(int saveSlot)
+    {
+        string path = Path.Combine(Application.persistentDataPath, $"{SaveFileName}_{saveSlot}.json");
+        if (!File.Exists(path)) return null;
+        string fileJson = File.ReadAllText(path);
+        return JsonConvert.DeserializeObject<SaveData>(fileJson).metadata;
     }
 
     public void SaveGame()
     {
-        SaveData saveData = new SaveData();
+        SaveData saveData = new();
+
         // Find all MonoBehaviour ISavable objects in the scene and save their state
-        List<ISavable> saveables = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None).OfType<ISavable>().ToList();
+        List<ISavable> saveables = FindObjectsByType<MonoBehaviour>().OfType<ISavable>().ToList();
 
         // Find all non MonoBehaviour ISavable objects in the scene and save their state
         // Sigal Channels
-        HashSet<Signals.Channel> signalChannels = new();
-        foreach (ISavable savable in saveables) if (savable is Signals.Port port && port.signalChannel != null) signalChannels.Add(port.signalChannel);
-        foreach (Signals.Channel signalChannel in signalChannels) saveables.Add(signalChannel);
+        HashSet<Channel> signalChannels = new();
+        foreach (ISavable savable in saveables) if (savable is Port port && port.signalChannel != null) signalChannels.Add(port.signalChannel);
+        foreach (Channel signalChannel in signalChannels) saveables.Add(signalChannel);
 
         // Save GameManager state
         GameManager.Instance.SaveState(saveData);
@@ -98,7 +145,7 @@ public class SaveManager : MonoBehaviour
         // Save ISavable objects state
         foreach (ISavable savable in saveables)
         {
-            SavebleEntry entry = new SavebleEntry
+            SavebleEntry entry = new()
             {
                 id = savable.ID,
                 transform = savable.ShouldInstantiateOnLoad() ? new SerializableTransform
@@ -114,21 +161,45 @@ public class SaveManager : MonoBehaviour
             saveData.savables.Add(entry);
         }
 
+        // update save metadata
+        loadedSaveMetadata.playtime += sessionPlaytime;
+        sessionPlaytime = 0;
+        saveData.metadata = loadedSaveMetadata;
+
         // Write the save data to a file
         string finalJson = JsonConvert.SerializeObject(saveData, Formatting.Indented);
-        string path = Path.Combine(Application.persistentDataPath, SaveFileName);
+        string path = Path.Combine(Application.persistentDataPath, $"{SaveFileName}_{LoadedSaveSlot}.json");
         File.WriteAllText(path, finalJson);
     }
 
-    public void LoadGame()
+    public void StartNewGame(int saveSlot)
     {
-        string path = Path.Combine(Application.persistentDataPath, SaveFileName);
-        if (!File.Exists(path)) return;
+        sessionPlaytime = 0;
+        LoadedSaveSlot = saveSlot;
+        loadedSaveMetadata = new()
+        {
+            playtime = 0
+        };
+        SceneManager.LoadScene(gameScene.Name);
+    }
+
+    public async Awaitable LoadGameAsync(int saveSlot)
+    {
+        sessionPlaytime = 0;
+        LoadedSaveSlot = saveSlot;
+
+        await SceneManager.LoadSceneAsync(gameScene.Name);
+        await Awaitable.EndOfFrameAsync();
+        print(PrefabRegistries.Instance.ToString());
+
+        string path = Path.Combine(Application.persistentDataPath, $"{SaveFileName}_{saveSlot}.json");
+        if (!File.Exists(path)) throw new Exception("save file doesnt exist");
         string fileJson = File.ReadAllText(path);
         SaveData saveData = JsonConvert.DeserializeObject<SaveData>(fileJson);
+        loadedSaveMetadata = saveData.metadata;
 
         // Phase 1: Instantiate all ISavable objects that should be instantiated on load
-        Dictionary<int, ISavable> idLookup = new Dictionary<int, ISavable>();
+        Dictionary<int, ISavable> idLookup = new();
         foreach (SavebleEntry entry in saveData.savables)
         {
             if (!entry.shouldInstantiateOnLoad) continue;
@@ -139,8 +210,8 @@ public class SaveManager : MonoBehaviour
             idLookup[entry.id].ID = entry.id;
 
             // save the prefab for structures
-            var structure = obj.GetComponent<Structures.StructureEntity>();
-            if (structure != null) structure.prefab = PrefabRegistries.Instance.savables[entry.type];
+            if (obj.TryGetComponent<StructureEntity>(out var structure))
+                structure.prefab = PrefabRegistries.Instance.savables[entry.type];
         }
 
         // Phase 2: Non instantiated ISavable objects, custom logic should be implemented here for each type
@@ -149,15 +220,15 @@ public class SaveManager : MonoBehaviour
             if (entry.shouldInstantiateOnLoad) continue;
 
             // custom logic for finding/instantiating the object
-            if (entry.type == typeof(Signals.Port).ToString())
+            if (entry.type == typeof(Port).ToString())
             {
                 // find the port using its name and the id of the structure it belongs to (stored in the stateJson)
                 (int _, string name, int structureId) = JsonConvert.DeserializeObject<(int, string, int)>(entry.stateJson);
-                idLookup[entry.id] = ((MonoBehaviour)idLookup[structureId]).gameObject.GetComponentsInChildren<Signals.Port>().First(p => p.name == name);
+                idLookup[entry.id] = ((MonoBehaviour)idLookup[structureId]).gameObject.GetComponentsInChildren<Port>().First(p => p.name == name);
             }
-            else if (entry.type == typeof(Signals.Channel).ToString())
+            else if (entry.type == typeof(Channel).ToString())
             {
-                idLookup[entry.id] = new Signals.Channel();
+                idLookup[entry.id] = new Channel();
             }
             else if (entry.type == typeof(ChunksManager).ToString())
             {
@@ -176,5 +247,19 @@ public class SaveManager : MonoBehaviour
         // restore the id generator
         nextId = 0;
         foreach (SavebleEntry entry in saveData.savables) nextId = Mathf.Max(nextId, entry.id + 1);
+    }
+
+    public void ExitToMainMenu()
+    {
+        sessionPlaytime = 0;
+        LoadedSaveSlot = -1;
+        loadedSaveMetadata = null;
+        SceneManager.LoadScene(menuScene.Name);
+    }
+
+    public void SaveAndExitToMainMenu()
+    {
+        SaveGame();
+        ExitToMainMenu();
     }
 }
